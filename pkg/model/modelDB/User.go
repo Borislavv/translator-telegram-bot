@@ -1,10 +1,10 @@
-package types
+package modelDB
 
 import "time"
 
 type User struct {
-	ID        int32
-	ChatId    int32
+	ID        int64
+	ChatId    int64
 	Username  string
 	CreatedAt time.Time
 }

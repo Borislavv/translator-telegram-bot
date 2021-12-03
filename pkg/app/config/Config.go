@@ -6,6 +6,9 @@ import "github.com/Borislavv/Translator-telegram-bot/pkg/repository"
 const ProdMode = "prod"
 const DevMode = "dev"
 
+// Environment default values
+const DefaultConfigPath = "config/.env.prod.toml"
+
 type Environment struct {
 	Mode string
 }
@@ -17,7 +20,7 @@ type Config struct {
 }
 
 // NewConfig - creating a new instance of Config
-func NewConfig() *Config {
+func New() *Config {
 	return &Config{
 		Repository:  repository.NewRepositoryConfig(),
 		Environment: &Environment{ProdMode},

@@ -1,12 +1,12 @@
-package types
+package modelDB
 
 import "time"
 
 type MessageQueue struct {
-	ID        int32
+	ID        int64
 	QueueId   int64
 	Message   string
-	ChatId    int32
+	ChatId    int64
 	CreatedAt time.Time
 }
 

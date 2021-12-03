@@ -1,6 +1,10 @@
 package repository
 
-import "database/sql"
+import (
+	"database/sql"
+
+	_ "github.com/go-sql-driver/mysql"
+)
 
 type RepositoryInterface interface {
 	Open() error
@@ -13,6 +17,13 @@ type Repository struct {
 	ChatRepository         *ChatRepository
 	MessageQueueRepository *MessageQueueRepository
 	UserRepository         *UserRepository
+}
+
+// New - creating a new instance of origin Repository
+func New(repositoryConfig *RepositoryConfig) *Repository {
+	return &Repository{
+		config: repositoryConfig,
+	}
 }
 
 // Open - opening a new connection with database
@@ -40,10 +51,8 @@ func (repository *Repository) Close() error {
 	return nil
 }
 
-/**
- * Define a new repository further:
- */
-
+// Repositories:
+//
 // Chat - creating an instance of ChatRepository
 func (repository *Repository) Chat() *ChatRepository {
 	if repository.ChatRepository != nil {
@@ -51,7 +60,7 @@ func (repository *Repository) Chat() *ChatRepository {
 	}
 
 	repository.ChatRepository = &ChatRepository{
-		repository: repository,
+		connection: repository,
 	}
 
 	return repository.ChatRepository
@@ -64,7 +73,7 @@ func (repository *Repository) User() *UserRepository {
 	}
 
 	repository.UserRepository = &UserRepository{
-		repository: repository,
+		connection: repository,
 	}
 
 	return repository.UserRepository
@@ -77,7 +86,7 @@ func (repository *Repository) MessageQueue() *MessageQueueRepository {
 	}
 
 	repository.MessageQueueRepository = &MessageQueueRepository{
-		repository: repository,
+		connection: repository,
 	}
 
 	return repository.MessageQueueRepository
