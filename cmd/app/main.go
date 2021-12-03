@@ -11,7 +11,7 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/repository"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 )
 
 var (
@@ -22,35 +22,38 @@ var (
 func main() {
 	askFlags()
 
-	// gateway := service.NewTelegramGateway()
-
-	// updates, err := gateway.GetUpdates(0)
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
-
-	// for _, message := range updates.Messages {
-	// 	fmt.Printf("%+v\n", message)
-	// }
-
-	////////here
-	fmt.Println(configurationPath)
-
+	//!!! Common
 	config := loadConfig()
 	manager := manager.New(config)
 
-	// fmt.Printf("%s\n", config.Repository.DSN)
+	//!!! GetUpdates
+
+	gateway := service.NewTelegramGateway(manager)
+
+	updates := gateway.GetUpdates(0)
+
+	for _, message := range updates.Messages {
+		fmt.Printf("%+v\n", message)
+	}
+
+	//!!! SendMessage
+
+	gateway.SendMessage("-1001728386516", "Hello from go code!!!!")
+
+	//!!! Save to database
 
 	chat := modelDB.NewChat()
 	chatId, _ := strconv.Atoi("-1001728386516")
 	chat.ExternalChatId = int64(chatId)
 
-	chat, err := manager.Repository.Chat().Create(chat)
-	if err != nil {
-		log.Fatalln(err)
+	chat, errN := manager.Repository.Chat().Create(chat)
+	if errN != nil {
+		log.Fatalln(errN)
 	}
 
 	fmt.Printf("%+v\n", chat)
+
+	//!!! Select one row from database
 
 	foundChat, err := manager.Repository.ChatRepository.FindByExternalChatId("-1001728386516")
 	if err != nil {
@@ -69,15 +72,17 @@ func askFlags() {
 
 // loadConfig - loading a config file to struct
 func loadConfig() *config.Config {
-	repositoryConfig := repository.NewRepositoryConfig()
+	config := config.New()
 
-	_, err := toml.DecodeFile(configurationPath, repositoryConfig)
+	_, err := toml.DecodeFile(configurationPath, config.Repository)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	config := config.New()
-	config.Repository = repositoryConfig
+	_, err = toml.DecodeFile(configurationPath, config.Integration)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	return config
 }

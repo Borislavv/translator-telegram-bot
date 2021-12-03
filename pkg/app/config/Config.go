@@ -17,6 +17,7 @@ type Environment struct {
 type Config struct {
 	Repository  *repository.RepositoryConfig
 	Environment *Environment
+	Integration *IntegrationConfig
 }
 
 // NewConfig - creating a new instance of Config
@@ -24,5 +25,6 @@ func New() *Config {
 	return &Config{
 		Repository:  repository.NewRepositoryConfig(),
 		Environment: &Environment{ProdMode},
+		Integration: NewIntegrationConfig(),
 	}
 }
