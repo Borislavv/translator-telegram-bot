@@ -15,11 +15,6 @@ type Repository struct {
 	UserRepository         *UserRepository
 }
 
-type RepositoryConfig struct {
-	Driver string `toml:"database_driver"`
-	DSN    string `toml:"database_url"`
-}
-
 // Open - opening a new connection with database
 func (repository *Repository) Open() error {
 	db, err := sql.Open(repository.config.Driver, repository.config.DSN)
