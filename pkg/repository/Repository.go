@@ -14,9 +14,9 @@ type RepositoryInterface interface {
 type Repository struct {
 	config                 *RepositoryConfig
 	db                     *sql.DB
-	ChatRepository         *ChatRepository
-	MessageQueueRepository *MessageQueueRepository
-	UserRepository         *UserRepository
+	chatRepository         *ChatRepository
+	messageQueueRepository *MessageQueueRepository
+	userRepository         *UserRepository
 }
 
 // New - creating a new instance of origin Repository
@@ -55,39 +55,39 @@ func (repository *Repository) Close() error {
 //
 // Chat - creating an instance of ChatRepository
 func (repository *Repository) Chat() *ChatRepository {
-	if repository.ChatRepository != nil {
-		return repository.ChatRepository
+	if repository.chatRepository != nil {
+		return repository.chatRepository
 	}
 
-	repository.ChatRepository = &ChatRepository{
+	repository.chatRepository = &ChatRepository{
 		connection: repository,
 	}
 
-	return repository.ChatRepository
+	return repository.chatRepository
 }
 
 // User -creating an instance of UserRepository
 func (repository *Repository) User() *UserRepository {
-	if repository.ChatRepository != nil {
-		return repository.UserRepository
+	if repository.userRepository != nil {
+		return repository.userRepository
 	}
 
-	repository.UserRepository = &UserRepository{
+	repository.userRepository = &UserRepository{
 		connection: repository,
 	}
 
-	return repository.UserRepository
+	return repository.userRepository
 }
 
 // MessageQueue -creating an instance of MessageQueueRepository
 func (repository *Repository) MessageQueue() *MessageQueueRepository {
-	if repository.ChatRepository != nil {
-		return repository.MessageQueueRepository
+	if repository.messageQueueRepository != nil {
+		return repository.messageQueueRepository
 	}
 
-	repository.MessageQueueRepository = &MessageQueueRepository{
+	repository.messageQueueRepository = &MessageQueueRepository{
 		connection: repository,
 	}
 
-	return repository.MessageQueueRepository
+	return repository.messageQueueRepository
 }

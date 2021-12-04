@@ -103,5 +103,5 @@ func (gateway *TelegramGateway) SendMessage(chatId string, message string) error
 		return nil
 	}
 
-	return errors.New("not `ok` respnse status received")
+	return errors.New("not `ok` respnse status received: " + fmt.Sprintf("\n%+v\n", string(reqBody)))
 }

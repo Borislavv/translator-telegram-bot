@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"database/sql"
+
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 )
 
@@ -8,19 +10,22 @@ type ChatRepository struct {
 	connection *Repository
 }
 
-// Create - adding a new user row into db
+// Create - adding a new `chat` row into db
 func (repository *ChatRepository) Create(chat *modelDB.Chat) (*modelDB.Chat, error) {
 	result, err := repository.connection.db.Exec("INSERT INTO chat (external_chat_id) VALUES (?)", chat.ExternalChatId)
 	if err != nil {
 		return nil, err
 	}
 
-	chat.ID, _ = result.LastInsertId()
+	chat.ID, err = result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
 
 	return chat, nil
 }
 
-// FindByChatId - trying to find row into chat by id
+// FindByChatId - trying to find row into `chat` by id
 func (repository *ChatRepository) FindByChatId(chatId string) (*modelDB.Chat, error) {
 	chat := modelDB.NewChat()
 
@@ -38,8 +43,8 @@ func (repository *ChatRepository) FindByChatId(chatId string) (*modelDB.Chat, er
 	return chat, nil
 }
 
-// FindByExternalChatId - trying to find row into chat by external_chat_id
-func (repository *ChatRepository) FindByExternalChatId(externalChatId string) (*modelDB.Chat, error) {
+// FindByExternalChatId - trying to find row into `chat` by external_chat_id
+func (repository *ChatRepository) FindByExternalChatId(externalChatId int64) (*modelDB.Chat, error) {
 	chat := modelDB.NewChat()
 
 	if err := repository.connection.db.QueryRow(
@@ -50,7 +55,9 @@ func (repository *ChatRepository) FindByExternalChatId(externalChatId string) (*
 		&chat.ExternalChatId,
 		&chat.CreatedAt,
 	); err != nil {
-		return nil, err
+		if err != sql.ErrNoRows {
+			return nil, err
+		}
 	}
 
 	return chat, nil

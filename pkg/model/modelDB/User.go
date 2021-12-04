@@ -1,6 +1,8 @@
 package modelDB
 
-import "time"
+import (
+	"time"
+)
 
 type User struct {
 	ID        int64

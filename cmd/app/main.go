@@ -2,15 +2,13 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
-	"strconv"
+	"time"
 
 	"github.com/BurntSushi/toml"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 )
 
@@ -22,51 +20,65 @@ var (
 func main() {
 	askFlags()
 
-	//!!! Common
 	config := loadConfig()
 	manager := manager.New(config)
-
-	//!!! GetUpdates
-
 	gateway := service.NewTelegramGateway(manager)
+	userService := service.NewUserService(manager)
+	bot := service.NewTelegramBot(manager, gateway, userService)
 
-	updates := gateway.GetUpdates(0)
+	defer manager.Repository.Close()
 
-	for _, message := range updates.Messages {
-		fmt.Printf("%+v\n", message)
+	for {
+		bot.HandlingMessages()
+
+		time.Sleep(1 * time.Second)
 	}
 
-	//!!! SendMessage
+	// //!!! Common
+	// config := loadConfig()
+	// manager := manager.New(config)
 
-	gateway.SendMessage("-1001728386516", "Hello from go code!!!!")
+	// //!!! GetUpdates
 
-	//!!! Save to database
+	// gateway := service.NewTelegramGateway(manager)
 
-	chat := modelDB.NewChat()
-	chatId, _ := strconv.Atoi("-1001728386516")
-	chat.ExternalChatId = int64(chatId)
+	// updates := gateway.GetUpdates(0)
 
-	chat, errN := manager.Repository.Chat().Create(chat)
-	if errN != nil {
-		log.Fatalln(errN)
-	}
+	// for _, message := range updates.Messages {
+	// 	fmt.Printf("%+v\n", message)
+	// }
 
-	fmt.Printf("%+v\n", chat)
+	// //!!! SendMessage
 
-	//!!! Select one row from database
+	// gateway.SendMessage("-1001728386516", "Hello from go code!!!!")
 
-	foundChat, err := manager.Repository.ChatRepository.FindByExternalChatId("-1001728386516")
-	if err != nil {
-		log.Fatalln(err)
-	}
+	// //!!! Save to database
 
-	fmt.Printf("%+v\n", foundChat)
+	// chat := modelDB.NewChat()
+	// chatId, _ := strconv.Atoi("-1001728386516")
+	// chat.ExternalChatId = int64(chatId)
+
+	// chat, errN := manager.Repository.Chat().Create(chat)
+	// if errN != nil {
+	// 	log.Fatalln(errN)
+	// }
+
+	// fmt.Printf("%+v\n", chat)
+
+	// //!!! Select one row from database
+
+	// foundChat, err := manager.Repository.Chat().FindByExternalChatId("-1001728386516")
+	// if err != nil {
+	// 	log.Fatalln(err)
+	// }
+
+	// fmt.Printf("%+v\n", foundChat)
 }
 
 // askFlags - getting args. from cli
 func askFlags() {
 	flag.StringVar(&environmentMode, "env-mode", config.ProdMode, "one of env. modes: prod|dev")
-	flag.StringVar(&configurationPath, "config-path", config.DefaultConfigPath, "path to config file, by default: config/.env.prod.toml")
+	flag.StringVar(&configurationPath, "config-path", config.DefaultConfigPath, "path to config file")
 	flag.Parse()
 }
 
