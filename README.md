@@ -10,19 +10,19 @@
 
 # Installation and running
 
-1. Choose the target configuration file and fill it. Config files path: root_app_dir/config.
+1. Choose the target configuration file and fill it. Config files path: `root_app_dir/config`.
 
 2. Migrations: 
-    UP  : migrate -database "mysql://username:userpassword@tcp(localhost:3306)/translator_telegram_bot" -path migrations up
-    Down: migrate -database "mysql://username:userpassword@tcp(localhost:3306)/translator_telegram_bot" -path migrations down
+    UP  : `migrate -database "mysql://username:userpassword@tcp(localhost:3306)/translator_telegram_bot" -path migrations up`
+    Down: `migrate -database "mysql://username:userpassword@tcp(localhost:3306)/translator_telegram_bot" -path migrations down`
 
 3. Compile executable file run it or just run the code (in the second case, binary file will be compiling and remove after all):
     2.1 Compile and run:
             Compiling: 
-                - cd cmd/app
-                - go build
+                - `cd cmd/app`
+                - `go build`
             Runnig:
-                - ./main --config-path ./../../config/.env.dev.toml
+                - `./main --config-path ./../../config/.env.dev.toml`
     2.2. Run without compiling (actualy 'with', but you will not see it):
             Running: 
-                - go run cmd/app/main.go --config-path config/.env.dev.toml
+                - `go run cmd/app/main.go --config-path config/.env.dev.toml`
