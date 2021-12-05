@@ -12,7 +12,7 @@
 
 1. Choose the target configuration file and fill it. Config files path: `root_app_dir/config`.
 
-2. Migrations:<br />
+2. Migrations (database in: `utf8_general_ci`):<br />
 &nbsp;&nbsp;&nbsp;&nbsp;UP  : `migrate -database "mysql://user:pass@tcp(localhost:3306)/translator_telegram_bot" -path migrations up`<br />
 &nbsp;&nbsp;&nbsp;&nbsp;Down: `migrate -database "mysql://user:pass@tcp(localhost:3306)/translator_telegram_bot" -path migrations down`
 

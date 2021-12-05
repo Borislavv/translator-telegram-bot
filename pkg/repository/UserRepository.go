@@ -35,7 +35,7 @@ func (repository *UserRepository) FindByUsername(username string) (*modelDB.User
 
 	if err := repository.connection.db.QueryRow(
 		"SELECT id, chat_id, username, created_at FROM user WHERE username = ?",
-		user.Username,
+		username,
 	).Scan(
 		&user.ID,
 		&user.ChatId,

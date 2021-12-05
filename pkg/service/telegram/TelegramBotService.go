@@ -35,10 +35,7 @@ func NewTelegramBot(
 }
 
 // HandlingMessages - main logic of processing received messages
-func (bot *TelegramBot) HandlingMessages() {
-	usersMap := make(map[string]*modelDB.User)
-	chatsMap := make(map[int64]*modelDB.Chat)
-
+func (bot *TelegramBot) HandlingMessages(usersMap map[string]*modelDB.User, chatsMap map[int64]*modelDB.Chat) {
 	updatedMessages, err := bot.getUpdates()
 	if err != nil {
 		log.Fatalln(util.Trace() + err.Error())
@@ -71,8 +68,11 @@ func (bot *TelegramBot) HandlingMessages() {
 			return
 		}
 
-		// in gorutine, because right now, this method does not need an instance of User, further will
-		go bot.getUser(updatedMessage.Data.Chat.Username, usersMap, chat)
+		_, err = bot.getUser(updatedMessage.Data.Chat.Username, usersMap, chat)
+		if err != nil {
+			log.Fatalln(util.Trace() + err.Error())
+			return
+		}
 
 		bot.handleMessage(chat, &messageQueue)
 	}
