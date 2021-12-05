@@ -1,12 +1,14 @@
 # Translator-telegram-bot
-#
-# Author: Glazunob Borislav
-#
-# Github: github.com/Borislavv
-# Gitlab: gitlab.com/Zendden
-#
-# Email: glazunov2142@gmail.com
-# Phone: +7(904)-939-89-83 (Telegram)
+
+**Author**: Glazunov Borislav
+
+**Github**: github.com/Borislavv **|**
+**Gitlab**: gitlab.com/Zendden
+
+**Email**: glazunov2142@gmail.com **|**
+**Phone**: +7(904)-939-89-83 (Telegram)
+
+# Installation and running
 
 1. Choose the target configuration file and fill it. Config files path: root_app_dir/config.
 
