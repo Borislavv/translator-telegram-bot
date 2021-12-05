@@ -10,6 +10,7 @@ import (
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
@@ -53,9 +54,12 @@ func main() {
 	// Close connection with database in defer
 	defer manager.Repository.Close()
 
+	usersCacheMap := make(map[string]*modelDB.User)
+	chatsCacheMap := make(map[int64]*modelDB.Chat)
+
 	for {
 		// Handle batch of UpdatedMessages
-		bot.HandlingMessages()
+		bot.HandlingMessages(usersCacheMap, chatsCacheMap)
 
 		// Timeout before new request
 		time.Sleep(1 * time.Second)
