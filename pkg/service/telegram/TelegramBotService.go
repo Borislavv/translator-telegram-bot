@@ -87,7 +87,8 @@ func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.
 	}
 
 	if err := bot.gateway.SendMessage(
-		fmt.Sprint(chat.ExternalChatId), "Translation: "+translatedMessage,
+		fmt.Sprint(chat.ExternalChatId),
+		translatedMessage,
 	); err != nil {
 		log.Fatalln(util.Trace() + err.Error())
 		return
