@@ -2,6 +2,7 @@ package translator
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,10 +13,6 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
-
-// Languages
-const EnLanguage = "en"
-const RuLanguage = "ru"
 
 // TranslatorGateway - representation of translator api as facade
 type TranslatorGateway struct {
@@ -30,32 +27,33 @@ func NewTranslatorGateway(manager *manager.Manager) *TranslatorGateway {
 }
 
 // Translate - trying to detect source and target languages and translate text
-func (gateway *TranslatorGateway) Translate(text string) (string, error) {
-	sourceLanguage, targetLanguage := DetectLanguages(text)
-
+func (gateway *TranslatorGateway) RequestTranslate(
+	sourceLanguage string,
+	targetLanguage string,
+	text string,
+) (string, error) {
 	// Getting updated messages from channels
 	response, err := http.Get(fmt.Sprintf(gateway.endpoint, sourceLanguage, targetLanguage, url.QueryEscape(text)))
 	if err != nil {
-		log.Fatalln(util.Trace() + err.Error())
-		return "Cannot translate: " + text, err
+		return "", err
 	}
 
 	// Reading body to slice of bytes
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Fatalln(util.Trace() + err.Error())
-		return "Cannot translate: " + text, err
+		return "", err
 	}
 
 	// Decoding json to TranslatedMessage struct
 	translatedMessage := model.NewTranslatedMessage()
 	if err := json.Unmarshal(body, translatedMessage); err != nil {
-		log.Fatalln(util.Trace() + err.Error())
-		return "Cannot translate: " + text, err
+		return "", err
 	}
 
+	// No translation have been received
 	if len(translatedMessage.Translations) == 0 {
 		log.Fatalln(util.Trace() + "no one translations have been received")
+		return "", errors.New("no one translations have been received")
 	}
 
 	return translatedMessage.Translations[0].Text, nil

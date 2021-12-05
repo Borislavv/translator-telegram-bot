@@ -16,7 +16,7 @@ type TelegramBot struct {
 	manager     *manager.Manager
 	gateway     *TelegramGateway
 	userService *service.UserService
-	translator  *translator.TranslatorGateway
+	translator  *translator.TranslatorService
 }
 
 // NewTelegramBot - creating a new instance of TelegramBot
@@ -24,7 +24,7 @@ func NewTelegramBot(
 	manager *manager.Manager,
 	gateway *TelegramGateway,
 	userService *service.UserService,
-	translator *translator.TranslatorGateway,
+	translator *translator.TranslatorService,
 ) *TelegramBot {
 	return &TelegramBot{
 		manager:     manager,
@@ -80,7 +80,7 @@ func (bot *TelegramBot) HandlingMessages() {
 
 // handleMessage - handle one message (right now: will send the same message with prefix)
 func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.MessageQueue) {
-	translatedMessage, err := bot.translator.Translate(messageQueue.Message)
+	translatedMessage, err := bot.translator.TranslateText(messageQueue.Message)
 	if err != nil {
 		log.Fatalln(util.Trace() + err.Error())
 		return

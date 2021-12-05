@@ -42,8 +42,11 @@ func main() {
 	// Creating an instance of TranslatorGateway
 	translatorGateway := translator.NewTranslatorGateway(manager)
 
+	// Creating an instance of TranslatorService
+	translator := translator.NewTranslatorService(translatorGateway)
+
 	// Creating an instance of TelegramBotService
-	bot := telegram.NewTelegramBot(manager, telegramGateway, userService, translatorGateway)
+	bot := telegram.NewTelegramBot(manager, telegramGateway, userService, translator)
 
 	fmt.Println("Handling messages ...")
 

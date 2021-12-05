@@ -1,21 +1,34 @@
 package translator
 
 import (
-	"log"
 	"regexp"
-
-	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
-// DetectLanguages - detecting target and source language by regex
-func DetectLanguages(text string) (string, string) {
-	matched, err := regexp.MatchString("~[а-яА-Я]+~", text)
-	if err != nil {
-		log.Fatalln(util.Trace() + err.Error())
-		return EnLanguage, RuLanguage
-	}
+// Languages
+const EnLanguage = "en"
+const RuLanguage = "ru"
 
-	if matched {
+type TranslatorService struct {
+	gateway *TranslatorGateway
+}
+
+// NewTranslatorService - constructor of TranslatorService
+func NewTranslatorService(gateway *TranslatorGateway) *TranslatorService {
+	return &TranslatorService{
+		gateway: gateway,
+	}
+}
+
+// TranslateText - translating text and auto-detecting of source and target languages
+func (translator *TranslatorService) TranslateText(text string) (string, error) {
+	sourceLanguage, targetLanguage := translator.detectLanguages(text)
+
+	return translator.gateway.RequestTranslate(sourceLanguage, targetLanguage, text)
+}
+
+// DetectLanguages - detecting target and source language by regex
+func (translator *TranslatorService) detectLanguages(text string) (string, string) {
+	if matched, _ := regexp.MatchString("[а-яА-Я]+", text); matched {
 		return RuLanguage, EnLanguage
 	}
 
