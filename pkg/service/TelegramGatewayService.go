@@ -12,6 +12,7 @@ import (
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
 // Method keys
@@ -29,7 +30,7 @@ type TelegramGateway struct {
 func NewTelegramGateway(manager *manager.Manager) *TelegramGateway {
 	methods := make(map[string]string)
 
-	methods[GetUpdatesMethod] = GetUpdatesMethod
+	methods[GetUpdatesMethod] = fmt.Sprintf("%s%s", GetUpdatesMethod, "?offset=%s")
 	methods[SendMessageMethod] = fmt.Sprintf("%s%s", SendMessageMethod, "?chat_id=%s&text=%s")
 
 	return &TelegramGateway{
@@ -42,23 +43,28 @@ func NewTelegramGateway(manager *manager.Manager) *TelegramGateway {
 // GetUpdates - getting messages from telegram channels with offset
 func (gateway *TelegramGateway) GetUpdates(offset int64) *model.UpdatedMessages {
 	// Getting updated messages from channels
-	response, err := http.Get(fmt.Sprintf(gateway.Endpoint, gateway.ApiToken, gateway.Methods[GetUpdatesMethod]))
+	response, err := http.Get(
+		fmt.Sprintf(
+			fmt.Sprintf(gateway.Endpoint, gateway.ApiToken, gateway.Methods[GetUpdatesMethod]),
+			fmt.Sprint(offset),
+		),
+	)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln(util.Trace() + err.Error())
 		return nil
 	}
 
 	// Reading body to slide of bytes
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln(util.Trace() + err.Error())
 		return nil
 	}
 
 	// Decoding json to UpdatedMessages struct
 	updatedMessages := model.NewUpdatedMessages()
 	if err := json.Unmarshal(body, updatedMessages); err != nil {
-		log.Fatalln(err)
+		log.Fatalln(util.Trace() + err.Error())
 		return nil
 	}
 
@@ -95,7 +101,7 @@ func (gateway *TelegramGateway) SendMessage(chatId string, message string) error
 
 	var sendMessageResponse RequestResponse
 	if err := json.Unmarshal(reqBody, &sendMessageResponse); err != nil {
-		log.Fatalln(err)
+		log.Fatalln(util.Trace() + err.Error())
 		return err
 	}
 
@@ -103,5 +109,5 @@ func (gateway *TelegramGateway) SendMessage(chatId string, message string) error
 		return nil
 	}
 
-	return errors.New("not `ok` respnse status received: " + fmt.Sprintf("\n%+v\n", string(reqBody)))
+	return errors.New("not `ok` respnse status received: " + fmt.Sprintf("%+v\n", string(reqBody)))
 }

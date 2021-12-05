@@ -7,6 +7,7 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
 type TelegramBot struct {
@@ -35,16 +36,22 @@ func (bot *TelegramBot) HandlingMessages() {
 
 	updatedMessages, err := bot.getUpdates()
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln(util.Trace() + err.Error())
+		return
+	}
+
+	// Do nothing, if no new message have been received
+	if len(updatedMessages) == 0 {
 		return
 	}
 
 	for _, updatedMessage := range updatedMessages {
-		fmt.Printf("%+v\n", updatedMessage)
+		// Print received message to CLI
+		log.Printf("Message received: %+v\n", updatedMessage)
 
 		chat, err := bot.getChat(updatedMessage.Data.Chat.ID, chatsMap)
 		if err != nil {
-			log.Fatalln(err)
+			log.Fatalln(util.Trace() + err.Error())
 			return
 		}
 
@@ -55,12 +62,12 @@ func (bot *TelegramBot) HandlingMessages() {
 		}
 
 		if _, err = bot.manager.Repository.MessageQueue().Create(&messageQueue); err != nil {
-			log.Fatalln(err)
+			log.Fatalln(util.Trace() + err.Error())
 			return
 		}
 
 		// in gorutine, because right now, this method does not need an instance of User, further will
-		bot.getUser(updatedMessage.Data.Chat.Username, usersMap, chat)
+		go bot.getUser(updatedMessage.Data.Chat.Username, usersMap, chat)
 
 		bot.handleMessage(chat, &messageQueue)
 	}
@@ -71,7 +78,7 @@ func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.
 	if err := bot.gateway.SendMessage(
 		fmt.Sprint(chat.ExternalChatId), "Bot answered you: "+messageQueue.Message,
 	); err != nil {
-		log.Fatalln(err)
+		log.Fatalln(util.Trace() + err.Error())
 		return
 	}
 }
@@ -79,8 +86,9 @@ func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.
 // getUpdates - will return a slice of UpdateMessage objects
 func (bot *TelegramBot) getUpdates() ([]model.UpdatedMessage, error) {
 	offset, err := bot.manager.Repository.MessageQueue().GetOffset()
+
 	if err != nil {
-		log.Println(err.Error() + "HEREERERE")
+		log.Fatalln(util.Trace() + err.Error())
 		return nil, err
 	}
 
@@ -94,7 +102,7 @@ func (bot *TelegramBot) getUser(username string, usersMap map[string]*modelDB.Us
 		// trying to find user into database
 		dbUser, err := bot.manager.Repository.User().FindByUsername(username)
 		if err != nil {
-			log.Fatalln(err)
+			log.Fatalln(util.Trace() + err.Error())
 			return nil, err
 		} else {
 			// user was not fonud, then create and store it
@@ -106,7 +114,7 @@ func (bot *TelegramBot) getUser(username string, usersMap map[string]*modelDB.Us
 				// store user
 				dbUser, err = bot.manager.Repository.User().Create(newUser)
 				if err != nil {
-					log.Fatalln(err)
+					log.Fatalln(util.Trace() + err.Error())
 					return nil, err
 				}
 			}

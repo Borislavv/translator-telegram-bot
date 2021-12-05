@@ -5,7 +5,7 @@ type UpdatedMessages struct {
 }
 
 type UpdatedMessage struct {
-	QueueId int64 `json:"updated_id"`
+	QueueId int64 `json:"update_id"`
 	Data    struct {
 		Chat struct {
 			ID       int64  `json:"id"`

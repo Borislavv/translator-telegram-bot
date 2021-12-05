@@ -10,8 +10,10 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
+// Config vars.
 var (
 	environmentMode   string
 	configurationPath string
@@ -20,59 +22,31 @@ var (
 func main() {
 	askFlags()
 
+	// Creating an instance of Config at first
 	config := loadConfig()
+
+	// Creating an instance of Manager (contains repos and config)
 	manager := manager.New(config)
+
+	// Creating an instance of TelegramGatewayService
 	gateway := service.NewTelegramGateway(manager)
+
+	//Creating an instance of UserService
 	userService := service.NewUserService(manager)
+
+	// Creating an instance of TelegramBotService
 	bot := service.NewTelegramBot(manager, gateway, userService)
 
+	// Close connection with database in defer
 	defer manager.Repository.Close()
 
 	for {
+		// Handle batch of UpdatedMessages
 		bot.HandlingMessages()
 
+		// Timeout before new request
 		time.Sleep(1 * time.Second)
 	}
-
-	// //!!! Common
-	// config := loadConfig()
-	// manager := manager.New(config)
-
-	// //!!! GetUpdates
-
-	// gateway := service.NewTelegramGateway(manager)
-
-	// updates := gateway.GetUpdates(0)
-
-	// for _, message := range updates.Messages {
-	// 	fmt.Printf("%+v\n", message)
-	// }
-
-	// //!!! SendMessage
-
-	// gateway.SendMessage("-1001728386516", "Hello from go code!!!!")
-
-	// //!!! Save to database
-
-	// chat := modelDB.NewChat()
-	// chatId, _ := strconv.Atoi("-1001728386516")
-	// chat.ExternalChatId = int64(chatId)
-
-	// chat, errN := manager.Repository.Chat().Create(chat)
-	// if errN != nil {
-	// 	log.Fatalln(errN)
-	// }
-
-	// fmt.Printf("%+v\n", chat)
-
-	// //!!! Select one row from database
-
-	// foundChat, err := manager.Repository.Chat().FindByExternalChatId("-1001728386516")
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
-
-	// fmt.Printf("%+v\n", foundChat)
 }
 
 // askFlags - getting args. from cli
@@ -88,12 +62,12 @@ func loadConfig() *config.Config {
 
 	_, err := toml.DecodeFile(configurationPath, config.Repository)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln(util.Trace() + err.Error())
 	}
 
 	_, err = toml.DecodeFile(configurationPath, config.Integration)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln(util.Trace() + err.Error())
 	}
 
 	return config

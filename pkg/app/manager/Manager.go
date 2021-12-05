@@ -5,6 +5,7 @@ import (
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/repository"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
 type Manager struct {
@@ -19,7 +20,7 @@ func New(config *config.Config) *Manager {
 	}
 
 	if err := manager.configureRepository(); err != nil {
-		log.Fatalln(err)
+		log.Fatalln(util.Trace() + err.Error())
 		return nil
 	}
 
