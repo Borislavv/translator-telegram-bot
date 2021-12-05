@@ -8,11 +8,13 @@
 # Email: glazunov2142@gmail.com
 # Phone: +7(904)-939-89-83 (Telegram)
 
-1. Migrations: 
+1. Choose the target configuration file and fill it. Config files path: root_app_dir/config.
+
+2. Migrations: 
     UP  : migrate -database "mysql://username:userpassword@tcp(localhost:3306)/translator_telegram_bot" -path migrations up
     Down: migrate -database "mysql://username:userpassword@tcp(localhost:3306)/translator_telegram_bot" -path migrations down
 
-2. Compile executable file run it or just run the code (in the second case, binary file will be compiling and remove after all):
+3. Compile executable file run it or just run the code (in the second case, binary file will be compiling and remove after all):
     2.1 Compile and run:
             Compiling: 
                 - cd cmd/app
