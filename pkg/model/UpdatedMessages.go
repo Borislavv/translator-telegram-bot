@@ -17,12 +17,12 @@ type UpdatedMessage struct {
 	} `json:"channel_post"`
 }
 
-// NewUpdatedMessages - UpdatedMessages struct creator.
+// NewUpdatedMessages - UpdatedMessages struct creator
 func NewUpdatedMessages() *UpdatedMessages {
 	return &UpdatedMessages{}
 }
 
-// NewUpdatedMessages - UpdatedMessage struct creator.
+// NewUpdatedMessages - UpdatedMessage struct creator
 func NewUpdatedMessage() *UpdatedMessage {
 	return &UpdatedMessage{}
 }

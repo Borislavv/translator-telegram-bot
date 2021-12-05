@@ -1,4 +1,4 @@
-package service
+package telegram
 
 import (
 	"fmt"
@@ -7,25 +7,30 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
 type TelegramBot struct {
 	manager     *manager.Manager
 	gateway     *TelegramGateway
-	userService *UserService
+	userService *service.UserService
+	translator  *translator.TranslatorGateway
 }
 
 // NewTelegramBot - creating a new instance of TelegramBot
 func NewTelegramBot(
 	manager *manager.Manager,
 	gateway *TelegramGateway,
-	userService *UserService,
+	userService *service.UserService,
+	translator *translator.TranslatorGateway,
 ) *TelegramBot {
 	return &TelegramBot{
 		manager:     manager,
 		gateway:     gateway,
 		userService: userService,
+		translator:  translator,
 	}
 }
 
@@ -75,8 +80,14 @@ func (bot *TelegramBot) HandlingMessages() {
 
 // handleMessage - handle one message (right now: will send the same message with prefix)
 func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.MessageQueue) {
+	translatedMessage, err := bot.translator.Translate(messageQueue.Message)
+	if err != nil {
+		log.Fatalln(util.Trace() + err.Error())
+		return
+	}
+
 	if err := bot.gateway.SendMessage(
-		fmt.Sprint(chat.ExternalChatId), "Bot answered you: "+messageQueue.Message,
+		fmt.Sprint(chat.ExternalChatId), "Translation: "+translatedMessage,
 	); err != nil {
 		log.Fatalln(util.Trace() + err.Error())
 		return

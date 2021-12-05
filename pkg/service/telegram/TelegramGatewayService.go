@@ -1,4 +1,4 @@
-package service
+package telegram
 
 import (
 	"encoding/json"
@@ -34,8 +34,8 @@ func NewTelegramGateway(manager *manager.Manager) *TelegramGateway {
 	methods[SendMessageMethod] = fmt.Sprintf("%s%s", SendMessageMethod, "?chat_id=%s&text=%s")
 
 	return &TelegramGateway{
-		Endpoint: manager.Config.Integration.ApiEndpoint,
-		ApiToken: manager.Config.Integration.ApiToken,
+		Endpoint: manager.Config.Integration.Telegram.ApiEndpoint,
+		ApiToken: manager.Config.Integration.Telegram.ApiToken,
 		Methods:  methods,
 	}
 }
@@ -54,7 +54,7 @@ func (gateway *TelegramGateway) GetUpdates(offset int64) *model.UpdatedMessages 
 		return nil
 	}
 
-	// Reading body to slide of bytes
+	// Reading body to slice of bytes
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		log.Fatalln(util.Trace() + err.Error())

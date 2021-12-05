@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
@@ -22,6 +25,8 @@ var (
 func main() {
 	askFlags()
 
+	fmt.Println("Initialization")
+
 	// Creating an instance of Config at first
 	config := loadConfig()
 
@@ -29,13 +34,18 @@ func main() {
 	manager := manager.New(config)
 
 	// Creating an instance of TelegramGatewayService
-	gateway := service.NewTelegramGateway(manager)
+	telegramGateway := telegram.NewTelegramGateway(manager)
 
-	//Creating an instance of UserService
+	// Creating an instance of UserService
 	userService := service.NewUserService(manager)
 
+	// Creating an instance of TranslatorGateway
+	translatorGateway := translator.NewTranslatorGateway(manager)
+
 	// Creating an instance of TelegramBotService
-	bot := service.NewTelegramBot(manager, gateway, userService)
+	bot := telegram.NewTelegramBot(manager, telegramGateway, userService, translatorGateway)
+
+	fmt.Println("Handling messages ...")
 
 	// Close connection with database in defer
 	defer manager.Repository.Close()
@@ -60,12 +70,20 @@ func askFlags() {
 func loadConfig() *config.Config {
 	config := config.New()
 
+	// Database config loading
 	_, err := toml.DecodeFile(configurationPath, config.Repository)
 	if err != nil {
 		log.Fatalln(util.Trace() + err.Error())
 	}
 
-	_, err = toml.DecodeFile(configurationPath, config.Integration)
+	// Telegram api config loading
+	_, err = toml.DecodeFile(configurationPath, &config.Integration.Telegram)
+	if err != nil {
+		log.Fatalln(util.Trace() + err.Error())
+	}
+
+	// Translator config loading
+	_, err = toml.DecodeFile(configurationPath, &config.Integration.Translator)
 	if err != nil {
 		log.Fatalln(util.Trace() + err.Error())
 	}
