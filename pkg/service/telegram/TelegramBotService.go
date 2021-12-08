@@ -68,11 +68,8 @@ func (bot *TelegramBot) HandlingMessages(usersMap map[string]*modelDB.User, chat
 			return
 		}
 
-		_, err = bot.getUser(updatedMessage.Data.Chat.Username, usersMap, chat)
-		if err != nil {
-			log.Fatalln(util.Trace() + err.Error())
-			return
-		}
+		// in the goroutine because the user is not currently being used
+		go bot.getUser(updatedMessage.Data.Chat.Username, usersMap, chat)
 
 		bot.handleMessage(chat, &messageQueue)
 	}
