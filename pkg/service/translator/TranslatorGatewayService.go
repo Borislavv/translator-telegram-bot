@@ -5,13 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
 // TranslatorGateway - representation of translator api as facade
@@ -44,6 +42,10 @@ func (gateway *TranslatorGateway) RequestTranslate(
 		return "", err
 	}
 
+	if !json.Valid(body) {
+		return "", errors.New("API returned a response not in json format")
+	}
+
 	// Decoding json to TranslatedMessage struct
 	translatedMessage := model.NewTranslatedMessage()
 	if err := json.Unmarshal(body, translatedMessage); err != nil {
@@ -52,7 +54,6 @@ func (gateway *TranslatorGateway) RequestTranslate(
 
 	// No translation have been received
 	if len(translatedMessage.Translations) == 0 {
-		log.Fatalln(util.Trace() + "no one translations have been received")
 		return "", errors.New("no one translations have been received")
 	}
 
