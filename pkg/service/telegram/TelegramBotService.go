@@ -3,6 +3,8 @@ package telegram
 import (
 	"fmt"
 	"log"
+	"regexp"
+	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
@@ -31,6 +33,41 @@ func NewTelegramBot(
 		gateway:     gateway,
 		userService: userService,
 		translator:  translator,
+	}
+}
+
+// HandlingNotification - checking notifications on next
+func (bot *TelegramBot) HandlingNotifications(chatsMap map[int64]*modelDB.Chat) {
+	notifications, err := bot.manager.Repository.NotificationQueue().FindByScheduledDate(time.Now())
+	if err != nil {
+		log.Fatalln(util.Trace() + err.Error())
+		return
+	}
+
+	for _, notification := range notifications {
+		// Print that notification is sent to CLI
+		log.Printf("Notification have been sent: %+v\n", notification)
+
+		// TODO: refactor this code, because the notification already has prop. ExternalChatId
+		chat, err := bot.getChat(notification.ExternalChatId, chatsMap)
+		if err != nil {
+			log.Fatalln(util.Trace() + err.Error())
+			return
+		}
+
+		if err := bot.gateway.SendMessage(
+			fmt.Sprint(chat.ExternalChatId),
+			"Notification: "+notification.Message,
+		); err != nil {
+			log.Fatalln(util.Trace() + err.Error())
+			return
+		}
+
+		_, err = bot.manager.Repository.NotificationQueue().MakeAsSent(notification)
+		if err != nil {
+			log.Fatalln(util.Trace() + err.Error())
+			return
+		}
 	}
 }
 
@@ -77,15 +114,45 @@ func (bot *TelegramBot) HandlingMessages(usersMap map[string]*modelDB.User, chat
 
 // handleMessage - handle one message (right now: will send the same message with prefix)
 func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.MessageQueue) {
-	translatedMessage, err := bot.translator.TranslateText(messageQueue.Message)
-	if err != nil {
-		log.Fatalln(util.Trace() + err.Error())
-		return
+	matchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(messageQueue.Message)
+
+	var message string
+	var err error
+	if len(matchedValue) <= 0 {
+		// processing translation
+		message, err = bot.translator.TranslateText(messageQueue.Message)
+		if err != nil {
+			log.Fatalln(util.Trace() + err.Error())
+			return
+		}
+
+		message = "Tranlsation: " + message
+	} else {
+		// processing notification
+		scheduledFor, err := time.Parse("2006-01-02 15:04:05", matchedValue[0])
+		if err != nil {
+			log.Fatalln(util.Trace() + err.Error())
+			return
+		}
+
+		notificationQueue := &modelDB.NotificationQueue{
+			MessageQueueId: messageQueue.ID,
+			ChatId:         messageQueue.ChatId,
+			ScheduledFor:   scheduledFor,
+		}
+
+		_, err = bot.manager.Repository.NotificationQueue().Create(notificationQueue)
+		if err != nil {
+			log.Fatalln(util.Trace() + err.Error())
+			return
+		}
+
+		message = "Notification setted on " + matchedValue[0]
 	}
 
 	if err := bot.gateway.SendMessage(
 		fmt.Sprint(chat.ExternalChatId),
-		translatedMessage,
+		message,
 	); err != nil {
 		log.Fatalln(util.Trace() + err.Error())
 		return

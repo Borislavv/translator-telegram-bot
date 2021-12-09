@@ -79,7 +79,7 @@ func (gateway *TelegramGateway) SendMessage(chatId string, message string) error
 				gateway.Endpoint, gateway.ApiToken, gateway.Methods[SendMessageMethod],
 			),
 			chatId,
-			message,
+			url.QueryEscape(message),
 		),
 		"application/json",
 		strings.NewReader(url.Values{}.Encode()),

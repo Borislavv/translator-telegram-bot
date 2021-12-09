@@ -57,6 +57,15 @@ func main() {
 	usersCacheMap := make(map[string]*modelDB.User)
 	chatsCacheMap := make(map[int64]*modelDB.Chat)
 
+	go func() {
+		for {
+			bot.HandlingNotifications(chatsCacheMap)
+
+			// Timeout before new checking notifications into database
+			time.Sleep(20 * time.Second)
+		}
+	}()
+
 	for {
 		// Handle batch of UpdatedMessages
 		bot.HandlingMessages(usersCacheMap, chatsCacheMap)
