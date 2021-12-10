@@ -28,7 +28,7 @@ func (userService *UserService) GetUser(username string, chatId int64) (*modelDB
 		// trying to find user into database
 		dbUser, err := userService.manager.Repository.User().FindByUsername(username)
 		if err != nil {
-			log.Println(util.Trace() + err.Error())
+			log.Println(util.Trace(err))
 			return nil, err
 		} else {
 			// user was not fonud, then create and store it
@@ -40,7 +40,7 @@ func (userService *UserService) GetUser(username string, chatId int64) (*modelDB
 				// store user
 				dbUser, err = userService.manager.Repository.User().Create(newUser)
 				if err != nil {
-					log.Println(util.Trace() + err.Error())
+					log.Println(util.Trace(err))
 					return nil, err
 				}
 			}

@@ -32,7 +32,7 @@ func main() {
 	// Init. channels for communication with gorutines
 	messagesChannel := make(chan *model.UpdatedMessage, 128)
 	notificationsChannel := make(chan *modelDB.NotificationQueue, 128)
-	errorsChannel := make(chan error, 256)
+	errorsChannel := make(chan string, 256)
 
 	// Creating an instance of Config at first
 	config := loadConfig()
@@ -109,19 +109,19 @@ func loadConfig() *config.Config {
 	// Database config loading
 	_, err := toml.DecodeFile(configurationPath, config.Repository)
 	if err != nil {
-		log.Fatalln(util.Trace() + err.Error())
+		log.Fatalln(util.Trace(err))
 	}
 
 	// Telegram api config loading
 	_, err = toml.DecodeFile(configurationPath, &config.Integration.Telegram)
 	if err != nil {
-		log.Fatalln(util.Trace() + err.Error())
+		log.Fatalln(util.Trace(err))
 	}
 
 	// Translator config loading
 	_, err = toml.DecodeFile(configurationPath, &config.Integration.Translator)
 	if err != nil {
-		log.Fatalln(util.Trace() + err.Error())
+		log.Fatalln(util.Trace(err))
 	}
 
 	return config

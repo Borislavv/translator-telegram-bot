@@ -20,7 +20,7 @@ func New(config *config.Config) *Manager {
 	}
 
 	if err := manager.configureRepository(); err != nil {
-		log.Fatalln(util.Trace() + err.Error())
+		log.Fatalln(util.Trace(err))
 		return nil
 	}
 

@@ -27,7 +27,7 @@ type TelegramBot struct {
 	// Channels
 	notificationsChannel chan *modelDB.NotificationQueue
 	messagesChannel      chan *model.UpdatedMessage
-	errorsChannel        chan error
+	errorsChannel        chan string
 }
 
 // NewTelegramBot - creating a new instance of TelegramBot
@@ -39,7 +39,7 @@ func NewTelegramBot(
 	translator *translator.TranslatorService,
 	notificationsChannel chan *modelDB.NotificationQueue,
 	messagesChannel chan *model.UpdatedMessage,
-	errorsChannel chan error,
+	errorsChannel chan string,
 ) *TelegramBot {
 	return &TelegramBot{
 		manager:              manager,
@@ -57,7 +57,7 @@ func NewTelegramBot(
 func (bot *TelegramBot) ProcessMessages() {
 	updatedMessages, err := bot.getUpdates()
 	if err != nil {
-		bot.errorsChannel <- err
+		bot.errorsChannel <- util.Trace(err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (bot *TelegramBot) ProcessMessages() {
 func (bot *TelegramBot) ProcessNotifications() {
 	notifications, err := bot.manager.Repository.NotificationQueue().FindByScheduledDate(time.Now())
 	if err != nil {
-		bot.errorsChannel <- err
+		bot.errorsChannel <- util.Trace(err)
 		return
 	}
 
@@ -91,8 +91,8 @@ func (bot *TelegramBot) ProcessNotifications() {
 
 // ProcessErrors - simple output of errors with debug info
 func (bot *TelegramBot) ProcessErrors() {
-	for err := range bot.errorsChannel {
-		log.Fatalln(util.Trace() + err.Error())
+	for errMsg := range bot.errorsChannel {
+		log.Println(errMsg)
 	}
 }
 
@@ -105,7 +105,7 @@ func (bot *TelegramBot) sendNotifications() {
 		// TODO: refactor this code, because the notification already has prop. ExternalChatId
 		chat, err := bot.chatService.GetChat(notification.ExternalChatId)
 		if err != nil {
-			bot.errorsChannel <- err
+			bot.errorsChannel <- util.Trace(err)
 			continue
 		}
 
@@ -115,13 +115,13 @@ func (bot *TelegramBot) sendNotifications() {
 				"Notification: "+notification.Message,
 			),
 		); err != nil {
-			bot.errorsChannel <- err
+			bot.errorsChannel <- util.Trace(err)
 			continue
 		}
 
 		_, err = bot.manager.Repository.NotificationQueue().MakeAsSent(notification)
 		if err != nil {
-			bot.errorsChannel <- err
+			bot.errorsChannel <- util.Trace(err)
 			continue
 		}
 	}
@@ -135,7 +135,7 @@ func (bot *TelegramBot) sendResponseMessages() {
 
 		chat, err := bot.chatService.GetChat(message.Data.Chat.ID)
 		if err != nil {
-			bot.errorsChannel <- err
+			bot.errorsChannel <- util.Trace(err)
 			continue
 		}
 
@@ -146,17 +146,17 @@ func (bot *TelegramBot) sendResponseMessages() {
 		}
 
 		if _, err = bot.manager.Repository.MessageQueue().Create(&messageQueue); err != nil {
-			bot.errorsChannel <- err
+			bot.errorsChannel <- util.Trace(err)
 			continue
 		}
 
 		if _, err = bot.userService.GetUser(message.Data.Chat.Username, chat.ID); err != nil {
-			bot.errorsChannel <- err
+			bot.errorsChannel <- util.Trace(err)
 			continue
 		}
 
 		if err = bot.handleMessage(chat, &messageQueue); err != nil {
-			bot.errorsChannel <- err
+			bot.errorsChannel <- util.Trace(err)
 			continue
 		}
 	}
