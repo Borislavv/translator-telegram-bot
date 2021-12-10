@@ -12,6 +12,7 @@ import (
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelInterface"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
@@ -72,14 +73,14 @@ func (gateway *TelegramGateway) GetUpdates(offset int64) *model.UpdatedMessages 
 }
 
 // SendMessage - sending message to target chat
-func (gateway *TelegramGateway) SendMessage(chatId string, message string) error {
+func (gateway *TelegramGateway) SendMessage(message modelInterface.ResponseMessageInterface) error {
 	reqResponse, err := http.Post(
 		fmt.Sprintf(
 			fmt.Sprintf(
 				gateway.Endpoint, gateway.ApiToken, gateway.Methods[SendMessageMethod],
 			),
-			chatId,
-			url.QueryEscape(message),
+			message.GetChatId(),
+			url.QueryEscape(message.GetMessage()),
 		),
 		"application/json",
 		strings.NewReader(url.Values{}.Encode()),

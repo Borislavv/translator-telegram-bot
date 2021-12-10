@@ -43,30 +43,61 @@ func (bot *TelegramBot) HandlingNotifications(chatsMap map[int64]*modelDB.Chat) 
 		return err
 	}
 
+	notificationsCh := make(chan *modelDB.NotificationQueue, 100)
+	errorsCh := make(chan error, 100)
+
+	if len(notifications) > 0 {
+		go bot.sendMessagesAsync(notificationsCh, errorsCh, chatsMap)
+		go bot.catchErrorsAsync(errorsCh)
+	}
+
 	for _, notification := range notifications {
+		notificationsCh <- notification
+	}
+
+	return nil
+}
+
+// sendMessagesAsync - sending message to telegram channel in gorutine
+func (bot *TelegramBot) sendMessagesAsync(
+	notificationsCh <-chan *modelDB.NotificationQueue,
+	errorsCh chan<- error,
+	chatsMap map[int64]*modelDB.Chat,
+) {
+	for notification := range notificationsCh {
 		// Print that notification is sent to CLI
 		log.Printf("Notification have been sent: %+v\n", notification)
 
 		// TODO: refactor this code, because the notification already has prop. ExternalChatId
 		chat, err := bot.getChat(notification.ExternalChatId, chatsMap)
 		if err != nil {
-			return err
+			errorsCh <- err
+			continue
 		}
 
 		if err := bot.gateway.SendMessage(
-			fmt.Sprint(chat.ExternalChatId),
-			"Notification: "+notification.Message,
+			model.NewTelegramResponseMessage(
+				fmt.Sprint(chat.ExternalChatId),
+				"Notification: "+notification.Message,
+			),
 		); err != nil {
-			return err
+			errorsCh <- err
+			continue
 		}
 
 		_, err = bot.manager.Repository.NotificationQueue().MakeAsSent(notification)
 		if err != nil {
-			return err
+			errorsCh <- err
+			continue
 		}
 	}
+}
 
-	return nil
+// catchErrorsAsync - printing errors in gorutine, which were received from sendMessagesAsync method
+func (bot *TelegramBot) catchErrorsAsync(errorsCh <-chan error) {
+	for err := range errorsCh {
+		log.Println(util.Trace() + err.Error())
+	}
 }
 
 // HandlingMessages - main logic of processing received messages
@@ -152,8 +183,10 @@ func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.
 	}
 
 	if err := bot.gateway.SendMessage(
-		fmt.Sprint(chat.ExternalChatId),
-		message,
+		model.NewTelegramResponseMessage(
+			fmt.Sprint(chat.ExternalChatId),
+			message,
+		),
 	); err != nil {
 		return err
 	}
