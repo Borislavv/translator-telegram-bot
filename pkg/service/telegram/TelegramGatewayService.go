@@ -50,21 +50,21 @@ func (gateway *TelegramGateway) GetUpdates(offset int64) *model.UpdatedMessages 
 		),
 	)
 	if err != nil {
-		log.Fatalln(util.Trace() + err.Error())
+		log.Println(util.Trace() + err.Error())
 		return nil
 	}
 
 	// Reading body to slice of bytes
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Fatalln(util.Trace() + err.Error())
+		log.Println(util.Trace() + err.Error())
 		return nil
 	}
 
 	// Decoding json to UpdatedMessages struct
 	updatedMessages := model.NewUpdatedMessages()
 	if err := json.Unmarshal(body, updatedMessages); err != nil {
-		log.Fatalln(util.Trace() + err.Error())
+		log.Println(util.Trace() + err.Error())
 		return nil
 	}
 
@@ -101,7 +101,7 @@ func (gateway *TelegramGateway) SendMessage(chatId string, message string) error
 
 	var sendMessageResponse RequestResponse
 	if err := json.Unmarshal(reqBody, &sendMessageResponse); err != nil {
-		log.Fatalln(util.Trace() + err.Error())
+		log.Println(util.Trace() + err.Error())
 		return err
 	}
 

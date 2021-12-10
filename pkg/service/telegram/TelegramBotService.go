@@ -37,11 +37,10 @@ func NewTelegramBot(
 }
 
 // HandlingNotification - checking notifications on next
-func (bot *TelegramBot) HandlingNotifications(chatsMap map[int64]*modelDB.Chat) {
+func (bot *TelegramBot) HandlingNotifications(chatsMap map[int64]*modelDB.Chat) error {
 	notifications, err := bot.manager.Repository.NotificationQueue().FindByScheduledDate(time.Now())
 	if err != nil {
-		log.Fatalln(util.Trace() + err.Error())
-		return
+		return err
 	}
 
 	for _, notification := range notifications {
@@ -51,37 +50,35 @@ func (bot *TelegramBot) HandlingNotifications(chatsMap map[int64]*modelDB.Chat) 
 		// TODO: refactor this code, because the notification already has prop. ExternalChatId
 		chat, err := bot.getChat(notification.ExternalChatId, chatsMap)
 		if err != nil {
-			log.Fatalln(util.Trace() + err.Error())
-			return
+			return err
 		}
 
 		if err := bot.gateway.SendMessage(
 			fmt.Sprint(chat.ExternalChatId),
 			"Notification: "+notification.Message,
 		); err != nil {
-			log.Fatalln(util.Trace() + err.Error())
-			return
+			return err
 		}
 
 		_, err = bot.manager.Repository.NotificationQueue().MakeAsSent(notification)
 		if err != nil {
-			log.Fatalln(util.Trace() + err.Error())
-			return
+			return err
 		}
 	}
+
+	return nil
 }
 
 // HandlingMessages - main logic of processing received messages
-func (bot *TelegramBot) HandlingMessages(usersMap map[string]*modelDB.User, chatsMap map[int64]*modelDB.Chat) {
+func (bot *TelegramBot) HandlingMessages(usersMap map[string]*modelDB.User, chatsMap map[int64]*modelDB.Chat) error {
 	updatedMessages, err := bot.getUpdates()
 	if err != nil {
-		log.Fatalln(util.Trace() + err.Error())
-		return
+		return err
 	}
 
 	// Do nothing, if no new message have been received
 	if len(updatedMessages) == 0 {
-		return
+		return err
 	}
 
 	for _, updatedMessage := range updatedMessages {
@@ -90,8 +87,8 @@ func (bot *TelegramBot) HandlingMessages(usersMap map[string]*modelDB.User, chat
 
 		chat, err := bot.getChat(updatedMessage.Data.Chat.ID, chatsMap)
 		if err != nil {
-			log.Fatalln(util.Trace() + err.Error())
-			return
+			log.Println(util.Trace() + err.Error())
+			continue
 		}
 
 		messageQueue := modelDB.MessageQueue{
@@ -101,19 +98,26 @@ func (bot *TelegramBot) HandlingMessages(usersMap map[string]*modelDB.User, chat
 		}
 
 		if _, err = bot.manager.Repository.MessageQueue().Create(&messageQueue); err != nil {
-			log.Fatalln(util.Trace() + err.Error())
-			return
+			log.Println(util.Trace() + err.Error())
+			continue
 		}
 
-		// in the goroutine because the user is not currently being used
-		go bot.getUser(updatedMessage.Data.Chat.Username, usersMap, chat)
+		if _, err = bot.getUser(updatedMessage.Data.Chat.Username, usersMap, chat); err != nil {
+			log.Println(util.Trace() + err.Error())
+			continue
+		}
 
-		bot.handleMessage(chat, &messageQueue)
+		if err = bot.handleMessage(chat, &messageQueue); err != nil {
+			log.Println(util.Trace() + err.Error())
+			continue
+		}
 	}
+
+	return nil
 }
 
 // handleMessage - handle one message (right now: will send the same message with prefix)
-func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.MessageQueue) {
+func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.MessageQueue) error {
 	matchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(messageQueue.Message)
 
 	var message string
@@ -122,8 +126,7 @@ func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.
 		// processing translation
 		message, err = bot.translator.TranslateText(messageQueue.Message)
 		if err != nil {
-			log.Fatalln(util.Trace() + err.Error())
-			return
+			return err
 		}
 
 		message = "Tranlsation: " + message
@@ -131,8 +134,7 @@ func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.
 		// processing notification
 		scheduledFor, err := time.Parse("2006-01-02 15:04:05", matchedValue[0])
 		if err != nil {
-			log.Fatalln(util.Trace() + err.Error())
-			return
+			return err
 		}
 
 		notificationQueue := &modelDB.NotificationQueue{
@@ -143,8 +145,7 @@ func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.
 
 		_, err = bot.manager.Repository.NotificationQueue().Create(notificationQueue)
 		if err != nil {
-			log.Fatalln(util.Trace() + err.Error())
-			return
+			return err
 		}
 
 		message = "Notification setted on " + matchedValue[0]
@@ -154,9 +155,10 @@ func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.
 		fmt.Sprint(chat.ExternalChatId),
 		message,
 	); err != nil {
-		log.Fatalln(util.Trace() + err.Error())
-		return
+		return err
 	}
+
+	return nil
 }
 
 // getUpdates - will return a slice of UpdateMessage objects
@@ -164,7 +166,7 @@ func (bot *TelegramBot) getUpdates() ([]model.UpdatedMessage, error) {
 	offset, err := bot.manager.Repository.MessageQueue().GetOffset()
 
 	if err != nil {
-		log.Fatalln(util.Trace() + err.Error())
+		log.Println(util.Trace() + err.Error())
 		return nil, err
 	}
 
@@ -178,7 +180,7 @@ func (bot *TelegramBot) getUser(username string, usersMap map[string]*modelDB.Us
 		// trying to find user into database
 		dbUser, err := bot.manager.Repository.User().FindByUsername(username)
 		if err != nil {
-			log.Fatalln(util.Trace() + err.Error())
+			log.Println(util.Trace() + err.Error())
 			return nil, err
 		} else {
 			// user was not fonud, then create and store it
@@ -190,7 +192,7 @@ func (bot *TelegramBot) getUser(username string, usersMap map[string]*modelDB.Us
 				// store user
 				dbUser, err = bot.manager.Repository.User().Create(newUser)
 				if err != nil {
-					log.Fatalln(util.Trace() + err.Error())
+					log.Println(util.Trace() + err.Error())
 					return nil, err
 				}
 			}

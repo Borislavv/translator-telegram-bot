@@ -59,7 +59,9 @@ func main() {
 
 	go func() {
 		for {
-			bot.HandlingNotifications(chatsCacheMap)
+			if err := bot.HandlingNotifications(chatsCacheMap); err != nil {
+				log.Println(util.Trace() + err.Error())
+			}
 
 			// Timeout before new checking notifications into database
 			time.Sleep(20 * time.Second)
@@ -68,7 +70,9 @@ func main() {
 
 	for {
 		// Handle batch of UpdatedMessages
-		bot.HandlingMessages(usersCacheMap, chatsCacheMap)
+		if err := bot.HandlingMessages(usersCacheMap, chatsCacheMap); err != nil {
+			log.Println(util.Trace() + err.Error())
+		}
 
 		// Timeout before new request
 		time.Sleep(1 * time.Second)
