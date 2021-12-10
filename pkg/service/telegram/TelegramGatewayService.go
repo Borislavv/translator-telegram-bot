@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelInterface"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
 // Method keys
@@ -42,30 +40,27 @@ func NewTelegramGateway(manager *manager.Manager) *TelegramGateway {
 }
 
 // GetUpdates - getting messages from telegram channels with offset
-func (gateway *TelegramGateway) GetUpdates(offset int64) *model.UpdatedMessages {
+func (gateway *TelegramGateway) GetUpdates(message modelInterface.RequestMessageInterface) *model.UpdatedMessages {
 	// Getting updated messages from channels
 	response, err := http.Get(
 		fmt.Sprintf(
 			fmt.Sprintf(gateway.Endpoint, gateway.ApiToken, gateway.Methods[GetUpdatesMethod]),
-			fmt.Sprint(offset),
+			fmt.Sprint(message.GetOffset()),
 		),
 	)
 	if err != nil {
-		log.Println(util.Trace() + err.Error())
 		return nil
 	}
 
 	// Reading body to slice of bytes
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Println(util.Trace() + err.Error())
 		return nil
 	}
 
 	// Decoding json to UpdatedMessages struct
 	updatedMessages := model.NewUpdatedMessages()
 	if err := json.Unmarshal(body, updatedMessages); err != nil {
-		log.Println(util.Trace() + err.Error())
 		return nil
 	}
 
@@ -86,13 +81,11 @@ func (gateway *TelegramGateway) SendMessage(message modelInterface.ResponseMessa
 		strings.NewReader(url.Values{}.Encode()),
 	)
 	if err != nil {
-		log.Panicln(err)
 		return err
 	}
 
 	reqBody, err := ioutil.ReadAll(reqResponse.Body)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 
@@ -102,7 +95,6 @@ func (gateway *TelegramGateway) SendMessage(message modelInterface.ResponseMessa
 
 	var sendMessageResponse RequestResponse
 	if err := json.Unmarshal(reqBody, &sendMessageResponse); err != nil {
-		log.Println(util.Trace() + err.Error())
 		return err
 	}
 

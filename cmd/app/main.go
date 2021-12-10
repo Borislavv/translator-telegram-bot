@@ -10,6 +10,7 @@ import (
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram"
@@ -28,6 +29,11 @@ func main() {
 
 	fmt.Println("Initialization")
 
+	// Init. channels for communication with gorutines
+	messagesChannel := make(chan *model.UpdatedMessage, 128)
+	notificationsChannel := make(chan *modelDB.NotificationQueue, 128)
+	errorsChannel := make(chan error, 256)
+
 	// Creating an instance of Config at first
 	config := loadConfig()
 
@@ -40,6 +46,9 @@ func main() {
 	// Creating an instance of UserService
 	userService := service.NewUserService(manager)
 
+	// Creating an instance of ChatService
+	chatService := service.NewChatService(manager)
+
 	// Creating an instance of TranslatorGateway
 	translatorGateway := translator.NewTranslatorGateway(manager)
 
@@ -47,21 +56,31 @@ func main() {
 	translator := translator.NewTranslatorService(translatorGateway)
 
 	// Creating an instance of TelegramBotService
-	bot := telegram.NewTelegramBot(manager, telegramGateway, userService, translator)
-
-	fmt.Println("Handling messages ...")
+	bot := telegram.NewTelegramBot(
+		manager,
+		telegramGateway,
+		userService,
+		chatService,
+		translator,
+		notificationsChannel,
+		messagesChannel,
+		errorsChannel,
+	)
 
 	// Close connection with database in defer
 	defer manager.Repository.Close()
 
-	usersCacheMap := make(map[string]*modelDB.User)
-	chatsCacheMap := make(map[int64]*modelDB.Chat)
+	fmt.Println("Handling messages ...")
 
 	go func() {
 		for {
-			if err := bot.HandlingNotifications(chatsCacheMap); err != nil {
-				log.Println(util.Trace() + err.Error())
-			}
+			bot.ProcessErrors()
+		}
+	}()
+
+	go func() {
+		for {
+			bot.ProcessNotifications()
 
 			// Timeout before new checking notifications into database
 			time.Sleep(20 * time.Second)
@@ -69,12 +88,9 @@ func main() {
 	}()
 
 	for {
-		// Handle batch of UpdatedMessages
-		if err := bot.HandlingMessages(usersCacheMap, chatsCacheMap); err != nil {
-			log.Println(util.Trace() + err.Error())
-		}
+		bot.ProcessMessages()
 
-		// Timeout before new request
+		// Timeout before new request to TelegramAPI for new messages
 		time.Sleep(1 * time.Second)
 	}
 }

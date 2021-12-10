@@ -15,10 +15,19 @@ import (
 )
 
 type TelegramBot struct {
-	manager     *manager.Manager
-	gateway     *TelegramGateway
+	// Dependencies
+	manager *manager.Manager
+	gateway *TelegramGateway
+
+	// Services
 	userService *service.UserService
+	chatService *service.ChatService
 	translator  *translator.TranslatorService
+
+	// Channels
+	notificationsChannel chan *modelDB.NotificationQueue
+	messagesChannel      chan *model.UpdatedMessage
+	errorsChannel        chan error
 }
 
 // NewTelegramBot - creating a new instance of TelegramBot
@@ -26,52 +35,77 @@ func NewTelegramBot(
 	manager *manager.Manager,
 	gateway *TelegramGateway,
 	userService *service.UserService,
+	chatService *service.ChatService,
 	translator *translator.TranslatorService,
+	notificationsChannel chan *modelDB.NotificationQueue,
+	messagesChannel chan *model.UpdatedMessage,
+	errorsChannel chan error,
 ) *TelegramBot {
 	return &TelegramBot{
-		manager:     manager,
-		gateway:     gateway,
-		userService: userService,
-		translator:  translator,
+		manager:              manager,
+		gateway:              gateway,
+		userService:          userService,
+		chatService:          chatService,
+		translator:           translator,
+		notificationsChannel: notificationsChannel,
+		messagesChannel:      messagesChannel,
+		errorsChannel:        errorsChannel,
 	}
 }
 
-// HandlingNotification - checking notifications on next
-func (bot *TelegramBot) HandlingNotifications(chatsMap map[int64]*modelDB.Chat) error {
+// HandlingMessages - main logic of processing received messages
+func (bot *TelegramBot) ProcessMessages() {
+	updatedMessages, err := bot.getUpdates()
+	if err != nil {
+		bot.errorsChannel <- err
+		return
+	}
+
+	// Do nothing, if no new message have been received
+	if len(updatedMessages) > 0 {
+		go bot.sendResponseMessages()
+
+		for _, updatedMessage := range updatedMessages {
+			bot.messagesChannel <- &updatedMessage
+		}
+	}
+}
+
+// ProcessNotifications - checking notifications on next
+func (bot *TelegramBot) ProcessNotifications() {
 	notifications, err := bot.manager.Repository.NotificationQueue().FindByScheduledDate(time.Now())
 	if err != nil {
-		return err
+		bot.errorsChannel <- err
+		return
 	}
 
-	notificationsCh := make(chan *modelDB.NotificationQueue, 100)
-	errorsCh := make(chan error, 100)
-
+	// Do nothing, if no new notification have been received
 	if len(notifications) > 0 {
-		go bot.sendMessagesAsync(notificationsCh, errorsCh, chatsMap)
-		go bot.catchErrorsAsync(errorsCh)
-	}
+		go bot.sendNotifications()
 
-	for _, notification := range notifications {
-		notificationsCh <- notification
+		for _, notification := range notifications {
+			bot.notificationsChannel <- notification
+		}
 	}
-
-	return nil
 }
 
-// sendMessagesAsync - sending message to telegram channel in gorutine
-func (bot *TelegramBot) sendMessagesAsync(
-	notificationsCh <-chan *modelDB.NotificationQueue,
-	errorsCh chan<- error,
-	chatsMap map[int64]*modelDB.Chat,
-) {
-	for notification := range notificationsCh {
+// ProcessErrors - simple output of errors with debug info
+func (bot *TelegramBot) ProcessErrors() {
+	for err := range bot.errorsChannel {
+		log.Fatalln(util.Trace() + err.Error())
+	}
+}
+
+// sendNotifications - sending message to telegram channel in gorutine
+func (bot *TelegramBot) sendNotifications() {
+	for notification := range bot.notificationsChannel {
 		// Print that notification is sent to CLI
 		log.Printf("Notification have been sent: %+v\n", notification)
 
 		// TODO: refactor this code, because the notification already has prop. ExternalChatId
-		chat, err := bot.getChat(notification.ExternalChatId, chatsMap)
+		chat, err := bot.chatService.GetChat(notification.ExternalChatId)
 		if err != nil {
-			errorsCh <- err
+			bot.errorsChannel <- err
 			continue
 		}
 
@@ -81,70 +115,51 @@ func (bot *TelegramBot) sendMessagesAsync(
 				"Notification: "+notification.Message,
 			),
 		); err != nil {
-			errorsCh <- err
+			bot.errorsChannel <- err
 			continue
 		}
 
 		_, err = bot.manager.Repository.NotificationQueue().MakeAsSent(notification)
 		if err != nil {
-			errorsCh <- err
+			bot.errorsChannel <- err
 			continue
 		}
 	}
 }
 
-// catchErrorsAsync - printing errors in gorutine, which were received from sendMessagesAsync method
-func (bot *TelegramBot) catchErrorsAsync(errorsCh <-chan error) {
-	for err := range errorsCh {
-		log.Println(util.Trace() + err.Error())
-	}
-}
-
-// HandlingMessages - main logic of processing received messages
-func (bot *TelegramBot) HandlingMessages(usersMap map[string]*modelDB.User, chatsMap map[int64]*modelDB.Chat) error {
-	updatedMessages, err := bot.getUpdates()
-	if err != nil {
-		return err
-	}
-
-	// Do nothing, if no new message have been received
-	if len(updatedMessages) == 0 {
-		return err
-	}
-
-	for _, updatedMessage := range updatedMessages {
+// sendResponseMessages - sending message to telegram chat from TelegramBot.messagesChannel
+func (bot *TelegramBot) sendResponseMessages() {
+	for message := range bot.messagesChannel {
 		// Print received message to CLI
-		log.Printf("Message received: %+v\n", updatedMessage)
+		log.Printf("Message received: %+v\n", message)
 
-		chat, err := bot.getChat(updatedMessage.Data.Chat.ID, chatsMap)
+		chat, err := bot.chatService.GetChat(message.Data.Chat.ID)
 		if err != nil {
-			log.Println(util.Trace() + err.Error())
+			bot.errorsChannel <- err
 			continue
 		}
 
 		messageQueue := modelDB.MessageQueue{
-			QueueId: updatedMessage.QueueId,
-			Message: updatedMessage.Data.Text,
+			QueueId: message.QueueId,
+			Message: message.Data.Text,
 			ChatId:  chat.ID,
 		}
 
 		if _, err = bot.manager.Repository.MessageQueue().Create(&messageQueue); err != nil {
-			log.Println(util.Trace() + err.Error())
+			bot.errorsChannel <- err
 			continue
 		}
 
-		if _, err = bot.getUser(updatedMessage.Data.Chat.Username, usersMap, chat); err != nil {
-			log.Println(util.Trace() + err.Error())
+		if _, err = bot.userService.GetUser(message.Data.Chat.Username, chat.ID); err != nil {
+			bot.errorsChannel <- err
 			continue
 		}
 
 		if err = bot.handleMessage(chat, &messageQueue); err != nil {
-			log.Println(util.Trace() + err.Error())
+			bot.errorsChannel <- err
 			continue
 		}
 	}
-
-	return nil
 }
 
 // handleMessage - handle one message (right now: will send the same message with prefix)
@@ -197,72 +212,9 @@ func (bot *TelegramBot) handleMessage(chat *modelDB.Chat, messageQueue *modelDB.
 // getUpdates - will return a slice of UpdateMessage objects
 func (bot *TelegramBot) getUpdates() ([]model.UpdatedMessage, error) {
 	offset, err := bot.manager.Repository.MessageQueue().GetOffset()
-
 	if err != nil {
-		log.Println(util.Trace() + err.Error())
 		return nil, err
 	}
 
-	return bot.gateway.GetUpdates(offset).Messages, nil
-}
-
-// getUser - getting of target user by username, if not found, then will created
-func (bot *TelegramBot) getUser(username string, usersMap map[string]*modelDB.User, chat *modelDB.Chat) (*modelDB.User, error) {
-	// trying to find user in the cache
-	if _, issetInCache := usersMap[username]; !issetInCache {
-		// trying to find user into database
-		dbUser, err := bot.manager.Repository.User().FindByUsername(username)
-		if err != nil {
-			log.Println(util.Trace() + err.Error())
-			return nil, err
-		} else {
-			// user was not fonud, then create and store it
-			if dbUser.ID <= 0 {
-				newUser := modelDB.NewUser()
-				newUser.ChatId = chat.ID
-				newUser.Username = username
-
-				// store user
-				dbUser, err = bot.manager.Repository.User().Create(newUser)
-				if err != nil {
-					log.Println(util.Trace() + err.Error())
-					return nil, err
-				}
-			}
-		}
-
-		// store user to cache
-		usersMap[username] = dbUser
-	}
-
-	return usersMap[username], nil
-}
-
-// getChat - getting of target chat by externalChatId, if not found, then will created
-func (bot *TelegramBot) getChat(externalChatId int64, chatsMap map[int64]*modelDB.Chat) (*modelDB.Chat, error) {
-	// trying to find chat in the cache
-	if _, issetInCache := chatsMap[externalChatId]; !issetInCache {
-		// trying to find chat into database
-		dbChat, err := bot.manager.Repository.Chat().FindByExternalChatId(externalChatId)
-		if err != nil {
-			return nil, err
-		} else {
-			// chat was not fonud, then create and store it
-			if dbChat.ID <= 0 {
-				newChat := modelDB.NewChat()
-				newChat.ExternalChatId = externalChatId
-
-				// store chat
-				dbChat, err = bot.manager.Repository.Chat().Create(newChat)
-				if err != nil {
-					return nil, err
-				}
-			}
-		}
-
-		// store chat to cache
-		chatsMap[dbChat.ExternalChatId] = dbChat
-	}
-
-	return chatsMap[externalChatId], nil
+	return bot.gateway.GetUpdates(model.NewTelegramRequestMessage(offset)).Messages, nil
 }
