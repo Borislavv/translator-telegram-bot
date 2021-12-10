@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
@@ -73,7 +74,12 @@ func (bot *TelegramBot) ProcessMessages() {
 
 // ProcessNotifications - checking notifications on next
 func (bot *TelegramBot) ProcessNotifications() {
-	notifications, err := bot.manager.Repository.NotificationQueue().FindByScheduledDate(time.Now())
+	dateTime := time.Now()
+	if bot.manager.Config.Environment.Mode == config.ProdMode {
+		dateTime = dateTime.Add(2 * time.Hour)
+	}
+
+	notifications, err := bot.manager.Repository.NotificationQueue().FindByScheduledDate(dateTime)
 	if err != nil {
 		bot.errorsChannel <- util.Trace(err)
 		return
