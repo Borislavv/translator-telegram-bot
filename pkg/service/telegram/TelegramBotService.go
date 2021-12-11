@@ -32,6 +32,7 @@ func (bot *TelegramBot) ProcessNotifications() {
 	go bot.telegramService.SendNotifications()
 }
 
+// ProcessMessages - get new messages from TelegramAPI, store it and answer
 func (bot *TelegramBot) ProcessMessages() {
 	// Notifications provider which will pass messages into `notificationsChannel`
 	go bot.telegramService.GetMessages()
