@@ -1,7 +1,6 @@
 package translator
 
 import (
-	"fmt"
 	"regexp"
 )
 
@@ -22,8 +21,6 @@ func NewTranslatorService(gateway *TranslatorGateway) *TranslatorService {
 
 // TranslateText - translating text and auto-detecting of source and target languages
 func (translator *TranslatorService) TranslateText(text string) (string, error) {
-	return fmt.Sprintf("mock [%s]", text), nil
-
 	sourceLanguage, targetLanguage := translator.detectLanguages(text)
 
 	return translator.gateway.GetTranslation(sourceLanguage, targetLanguage, text)
