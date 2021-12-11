@@ -30,6 +30,9 @@ type TelegramService struct {
 	messagesChannel      chan model.UpdatedMessage
 	errorsChannel        chan string
 	storeChannel         chan model.UpdatedMessage
+
+	// Cached values
+	lastReceivedOffset int64
 }
 
 // NewTelegramService - constructor of TelegramService
@@ -111,27 +114,31 @@ func (telegramService *TelegramService) SendNotifications() {
 
 // GetMessages - (gorutine) receive messages and deliver them to the `messagesChannel` for another goroutine
 func (telegramService *TelegramService) GetMessages() {
-	offset, err := telegramService.manager.Repository.MessageQueue().GetOffset()
+	if telegramService.lastReceivedOffset == 0 {
+		offset, err := telegramService.manager.Repository.MessageQueue().GetOffset()
+		if err != nil {
+			telegramService.errorsChannel <- util.Trace(err)
+			return
+		}
+
+		telegramService.lastReceivedOffset = offset
+	}
+
+	messages, err := telegramService.gateway.GetUpdates(model.NewTelegramRequestMessage(telegramService.lastReceivedOffset))
 	if err != nil {
 		telegramService.errorsChannel <- util.Trace(err)
 		return
 	}
 
-	messages := telegramService.gateway.GetUpdates(model.NewTelegramRequestMessage(offset)).Messages
-	if err != nil {
-		telegramService.errorsChannel <- util.Trace(err)
-		return
-	}
-
-	for _, message := range messages {
+	for _, message := range messages.Messages {
 		// send message for sending to telegram chat
 		telegramService.messagesChannel <- message
 
 		// send message for save into database
 		telegramService.storeChannel <- message
-
-		fmt.Printf("%+v\n", message)
 	}
+
+	telegramService.lastReceivedOffset = telegramService.lastReceivedOffset + int64(len(messages.Messages))
 }
 
 // SendMessages - (gorutine) pick up messages from the `messagesChannel` and send them to the telegram chat

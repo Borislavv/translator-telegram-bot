@@ -40,7 +40,7 @@ func NewTelegramGateway(manager *manager.Manager) *TelegramGateway {
 }
 
 // GetUpdates - getting messages from telegram channels with offset
-func (gateway *TelegramGateway) GetUpdates(message modelInterface.RequestMessageInterface) *model.UpdatedMessages {
+func (gateway *TelegramGateway) GetUpdates(message modelInterface.RequestMessageInterface) (*model.UpdatedMessages, error) {
 	// Getting updated messages from channels
 	response, err := http.Get(
 		fmt.Sprintf(
@@ -49,22 +49,22 @@ func (gateway *TelegramGateway) GetUpdates(message modelInterface.RequestMessage
 		),
 	)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	// Reading body to slice of bytes
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	// Decoding json to UpdatedMessages struct
 	updatedMessages := model.NewUpdatedMessages()
 	if err := json.Unmarshal(body, updatedMessages); err != nil {
-		return nil
+		return nil, err
 	}
 
-	return updatedMessages
+	return updatedMessages, nil
 }
 
 // SendMessage - sending message to target chat
