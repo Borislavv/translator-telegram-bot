@@ -78,19 +78,11 @@ func main() {
 		}
 	}()
 
-	go func() {
-		for {
-			bot.ProcessNotifications()
-
-			// Timeout before new checking notifications into database
-			time.Sleep(20 * time.Second)
-		}
-	}()
-
 	for {
 		bot.ProcessMessages()
+		bot.ProcessNotifications()
 
-		// Timeout before new request to TelegramAPI for new messages
+		// Timeout
 		time.Sleep(1 * time.Second)
 	}
 }
