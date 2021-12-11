@@ -3,10 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"time"
-
-	"github.com/BurntSushi/toml"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
@@ -15,7 +12,6 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
 // Config vars.
@@ -30,12 +26,15 @@ func main() {
 	fmt.Println("Initialization")
 
 	// Init. channels for communication with gorutines
-	messagesChannel := make(chan *model.UpdatedMessage, 128)
-	notificationsChannel := make(chan *modelDB.NotificationQueue, 128)
+	// Structures are used, not pointers for communication through channels,
+	// 	since collision occurs when getting target structure by pointer in goroutines
+	messagesChannel := make(chan model.UpdatedMessage, 128)
+	notificationsChannel := make(chan modelDB.NotificationQueue, 128)
 	errorsChannel := make(chan string, 256)
+	storeChannel := make(chan model.UpdatedMessage, 128)
 
-	// Creating an instance of Config at first
-	config := loadConfig()
+	// Creating an instance of Config at first and load it
+	config := config.New().Load(configurationPath, environmentMode)
 
 	// Creating an instance of Manager (contains repos and config)
 	manager := manager.New(config)
@@ -55,8 +54,8 @@ func main() {
 	// Creating an instance of TranslatorService
 	translator := translator.NewTranslatorService(translatorGateway)
 
-	// Creating an instance of TelegramBotService
-	bot := telegram.NewTelegramBot(
+	// Creating an instace of TelegramService
+	telegramService := telegram.NewTelegramService(
 		manager,
 		telegramGateway,
 		userService,
@@ -65,7 +64,11 @@ func main() {
 		notificationsChannel,
 		messagesChannel,
 		errorsChannel,
+		storeChannel,
 	)
+
+	// Creating an instance of TelegramBotService
+	bot := telegram.NewTelegramBot(telegramService, errorsChannel)
 
 	// Close connection with database in defer
 	defer manager.Repository.Close()
@@ -92,29 +95,4 @@ func askFlags() {
 	flag.StringVar(&environmentMode, "env-mode", config.ProdMode, "one of env. modes: prod|dev")
 	flag.StringVar(&configurationPath, "config-path", config.DefaultConfigPath, "path to config file")
 	flag.Parse()
-}
-
-// loadConfig - loading a config file to struct
-func loadConfig() *config.Config {
-	config := config.New()
-
-	// Database config loading
-	_, err := toml.DecodeFile(configurationPath, config.Repository)
-	if err != nil {
-		log.Fatalln(util.Trace(err))
-	}
-
-	// Telegram api config loading
-	_, err = toml.DecodeFile(configurationPath, &config.Integration.Telegram)
-	if err != nil {
-		log.Fatalln(util.Trace(err))
-	}
-
-	// Translator config loading
-	_, err = toml.DecodeFile(configurationPath, &config.Integration.Translator)
-	if err != nil {
-		log.Fatalln(util.Trace(err))
-	}
-
-	return config
 }

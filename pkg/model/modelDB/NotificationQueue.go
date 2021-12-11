@@ -17,3 +17,12 @@ type NotificationQueue struct {
 func NewNotificationQueue() *NotificationQueue {
 	return &NotificationQueue{}
 }
+
+// NewNotificationQueueConstructor -constructor of NotificationQueue
+func NewNotificationQueueConstructor(messageQueueId int64, chatId int64, scheduledFor time.Time) *NotificationQueue {
+	return &NotificationQueue{
+		MessageQueueId: messageQueueId,
+		ChatId:         chatId,
+		ScheduledFor:   scheduledFor,
+	}
+}
