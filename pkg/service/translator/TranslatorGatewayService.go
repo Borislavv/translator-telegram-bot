@@ -25,7 +25,7 @@ func NewTranslatorGateway(manager *manager.Manager) *TranslatorGateway {
 }
 
 // Translate - trying to detect source and target languages and translate text
-func (gateway *TranslatorGateway) RequestTranslate(
+func (gateway *TranslatorGateway) GetTranslation(
 	sourceLanguage string,
 	targetLanguage string,
 	text string,

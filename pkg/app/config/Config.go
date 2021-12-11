@@ -1,6 +1,13 @@
 package config
 
-import "github.com/Borislavv/Translator-telegram-bot/pkg/repository"
+import (
+	"log"
+
+	"github.com/BurntSushi/toml"
+
+	"github.com/Borislavv/Translator-telegram-bot/pkg/repository"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
+)
 
 // Environment mode
 const ProdMode = "prod"
@@ -27,4 +34,30 @@ func New() *Config {
 		Environment: &Environment{ProdMode},
 		Integration: NewIntegrationConfig(),
 	}
+}
+
+// Load - loading a config file to struct by received path
+func (config *Config) Load(configurationPath string, environmentMode string) *Config {
+	// Set environment mode
+	config.Environment.Mode = environmentMode
+
+	// Database config loading
+	_, err := toml.DecodeFile(configurationPath, config.Repository)
+	if err != nil {
+		log.Fatalln(util.Trace(err))
+	}
+
+	// Telegram api config loading
+	_, err = toml.DecodeFile(configurationPath, &config.Integration.Telegram)
+	if err != nil {
+		log.Fatalln(util.Trace(err))
+	}
+
+	// Translator config loading
+	_, err = toml.DecodeFile(configurationPath, &config.Integration.Translator)
+	if err != nil {
+		log.Fatalln(util.Trace(err))
+	}
+
+	return config
 }

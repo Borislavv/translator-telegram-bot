@@ -23,7 +23,7 @@ func NewTranslatorService(gateway *TranslatorGateway) *TranslatorService {
 func (translator *TranslatorService) TranslateText(text string) (string, error) {
 	sourceLanguage, targetLanguage := translator.detectLanguages(text)
 
-	return translator.gateway.RequestTranslate(sourceLanguage, targetLanguage, text)
+	return translator.gateway.GetTranslation(sourceLanguage, targetLanguage, text)
 }
 
 // DetectLanguages - detecting target and source language by regex

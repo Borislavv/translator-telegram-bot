@@ -14,3 +14,12 @@ type MessageQueue struct {
 func NewMessageQueue() *MessageQueue {
 	return &MessageQueue{}
 }
+
+// NewMessageQueueConstructor - constructor of MessageQueue
+func NewMessageQueueConstructor(queueId int64, message string, chatId int64) *MessageQueue {
+	return &MessageQueue{
+		QueueId: queueId,
+		Message: message,
+		ChatId:  chatId,
+	}
+}

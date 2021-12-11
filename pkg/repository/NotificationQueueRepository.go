@@ -35,8 +35,7 @@ func (repository *NotificationQueueRepository) FindByScheduledDate(dateTime time
 		"SELECT nq.id, msg.message, c.external_chat_id FROM notification_queue `nq`"+
 			" LEFT JOIN chat `c` ON nq.chat_id = c.id "+
 			" LEFT JOIN message_queue `msg` ON nq.message_queue_id = msg.id"+
-			" WHERE is_sent = 0 AND scheduled_for BETWEEN ? AND ?",
-		dateTime.Format("2006-01-02 15:04:05"),
+			" WHERE is_sent = 0 AND scheduled_for <= ?",
 		dateTime.Add(1*time.Minute).Format("2006-01-02 15:04:05"),
 	)
 
