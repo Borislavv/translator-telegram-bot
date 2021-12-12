@@ -28,10 +28,10 @@ type TelegramService struct {
 	translator  *translator.TranslatorService
 
 	// Channels
-	notificationsChannel chan modelDB.NotificationQueue
-	messagesChannel      chan model.UpdatedMessage
+	notificationsChannel chan *modelDB.NotificationQueue
+	messagesChannel      chan *model.UpdatedMessage
 	errorsChannel        chan string
-	storeChannel         chan model.UpdatedMessage
+	storeChannel         chan *model.UpdatedMessage
 
 	// Cached values
 	lastReceivedOffset int64
@@ -44,10 +44,10 @@ func NewTelegramService(
 	userService *service.UserService,
 	chatService *service.ChatService,
 	translator *translator.TranslatorService,
-	notificationsChannel chan modelDB.NotificationQueue,
-	messagesChannel chan model.UpdatedMessage,
+	notificationsChannel chan *modelDB.NotificationQueue,
+	messagesChannel chan *model.UpdatedMessage,
 	errorsChannel chan string,
-	storeChannel chan model.UpdatedMessage,
+	storeChannel chan *model.UpdatedMessage,
 ) *TelegramService {
 	return &TelegramService{
 		manager:              manager,
@@ -79,7 +79,7 @@ func (telegramService *TelegramService) GetNotifications() {
 
 	// Providing notifications to channel for  another gorutine
 	for _, notification := range notifications {
-		telegramService.notificationsChannel <- *notification
+		telegramService.notificationsChannel <- notification
 	}
 }
 
@@ -106,7 +106,7 @@ func (telegramService *TelegramService) SendNotifications() {
 			continue
 		}
 
-		_, err = telegramService.manager.Repository.NotificationQueue().MakeAsSent(&notification)
+		_, err = telegramService.manager.Repository.NotificationQueue().MakeAsSent(notification)
 		if err != nil {
 			telegramService.errorsChannel <- util.Trace(err)
 			continue
@@ -124,7 +124,9 @@ func (telegramService *TelegramService) GetMessages(m *sync.Mutex) {
 				return
 			}
 
+			m.Lock()
 			telegramService.lastReceivedOffset = offset
+			m.Unlock()
 		}
 
 		messages, err := telegramService.gateway.GetUpdates(model.NewTelegramRequestMessage(telegramService.lastReceivedOffset))
@@ -133,22 +135,19 @@ func (telegramService *TelegramService) GetMessages(m *sync.Mutex) {
 			return
 		}
 
+		m.Lock()
 		for _, message := range messages.Messages {
 
 			// send message for sending to telegram chat
-			telegramService.messagesChannel <- message
+			telegramService.messagesChannel <- &message
 
 			// send message for save into database
-			telegramService.storeChannel <- message
+			telegramService.storeChannel <- &message
 
 		}
-		m.Lock()
 
 		telegramService.lastReceivedOffset = telegramService.lastReceivedOffset + int64(len(messages.Messages))
-
 		m.Unlock()
-
-		runtime.Gosched()
 	}
 }
 
@@ -156,8 +155,8 @@ func (telegramService *TelegramService) GetMessages(m *sync.Mutex) {
 func (telegramService *TelegramService) SendMessages(m *sync.Mutex) {
 	for {
 		processingMessage, ok := <-telegramService.messagesChannel
+		m.Lock()
 		if ok {
-			m.Lock()
 			matchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(processingMessage.Data.Text)
 
 			var err error
@@ -186,9 +185,9 @@ func (telegramService *TelegramService) SendMessages(m *sync.Mutex) {
 				return
 			}
 
-			fmt.Println("DONE: SendMessages")
-			m.Unlock()
+			runtime.Gosched()
 		}
+		m.Unlock()
 	}
 }
 
@@ -197,8 +196,6 @@ func (telegramService *TelegramService) StoreMessages(m *sync.Mutex) {
 	for {
 		storingMessage, ok := <-telegramService.storeChannel
 		if ok {
-			m.Lock()
-
 			// Print received message to CLI
 			log.Printf("Message received: %+v\n", storingMessage)
 
@@ -247,8 +244,7 @@ func (telegramService *TelegramService) StoreMessages(m *sync.Mutex) {
 				}
 			}
 
-			fmt.Println("DONE: StoreMessages")
-			m.Unlock()
+			runtime.Gosched()
 		}
 	}
 }

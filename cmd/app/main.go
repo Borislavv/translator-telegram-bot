@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
@@ -29,10 +30,10 @@ func main() {
 	// Init. channels for communication with gorutines
 	// Structures are used, not pointers for communication through channels,
 	// 	since collision occurs when getting target structure by pointer in goroutines
-	messagesChannel := make(chan model.UpdatedMessage, 128)
-	notificationsChannel := make(chan modelDB.NotificationQueue, 128)
+	messagesChannel := make(chan *model.UpdatedMessage, 128)
+	notificationsChannel := make(chan *modelDB.NotificationQueue, 128)
 	errorsChannel := make(chan string, 256)
-	storeChannel := make(chan model.UpdatedMessage, 128)
+	storeChannel := make(chan *model.UpdatedMessage, 128)
 
 	// Creating an instance of Config at first and load it
 	config := config.New().Load(configurationPath, environmentMode)
@@ -87,7 +88,7 @@ func main() {
 	bot.ProcessMessages(&m)
 
 	for {
-
+		runtime.Gosched()
 		// bot.ProcessNotifications()
 
 		// Timeout
