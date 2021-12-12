@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-	"runtime"
 	"sync"
 	"time"
 
@@ -137,12 +136,14 @@ func (telegramService *TelegramService) GetMessages(m *sync.Mutex) {
 
 		m.Lock()
 		for _, message := range messages.Messages {
+			go telegramService.SendMessages(&message)
+			go telegramService.StoreMessages(&message)
 
-			// send message for sending to telegram chat
-			telegramService.messagesChannel <- &message
+			// // send message for sending to telegram chat
+			// telegramService.messagesChannel <- &message
 
 			// send message for save into database
-			telegramService.storeChannel <- &message
+			// telegramService.storeChannel <- &message
 
 		}
 
@@ -152,99 +153,83 @@ func (telegramService *TelegramService) GetMessages(m *sync.Mutex) {
 }
 
 // SendMessages - (gorutine) pick up messages from the `messagesChannel` and send them to the telegram chat
-func (telegramService *TelegramService) SendMessages(m *sync.Mutex) {
-	for {
-		processingMessage, ok := <-telegramService.messagesChannel
-		m.Lock()
-		if ok {
-			matchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(processingMessage.Data.Text)
+func (telegramService *TelegramService) SendMessages(processingMessage *model.UpdatedMessage) {
+	matchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(processingMessage.Data.Text)
 
-			var err error
-			var text string
-			if len(matchedValue) <= 0 {
-				// processing translation
-				text, err = telegramService.translator.TranslateText(processingMessage.Data.Text)
-				if err != nil {
-					telegramService.errorsChannel <- util.Trace(err)
-					return
-				}
-
-				text = "Tranlsation: " + text
-			} else {
-				// processing notification
-				text = "Notification setted on " + matchedValue[0]
-			}
-
-			if err := telegramService.gateway.SendMessage(
-				model.NewTelegramResponseMessage(
-					fmt.Sprint(processingMessage.Data.Chat.ID),
-					text,
-				),
-			); err != nil {
-				telegramService.errorsChannel <- util.Trace(err)
-				return
-			}
-
-			runtime.Gosched()
+	var err error
+	var text string
+	if len(matchedValue) <= 0 {
+		// processing translation
+		text, err = telegramService.translator.TranslateText(processingMessage.Data.Text)
+		if err != nil {
+			telegramService.errorsChannel <- util.Trace(err)
+			return
 		}
-		m.Unlock()
+
+		text = "Tranlsation: " + text
+	} else {
+		// processing notification
+		text = "Notification setted on " + matchedValue[0]
+	}
+
+	if err := telegramService.gateway.SendMessage(
+		model.NewTelegramResponseMessage(
+			fmt.Sprint(processingMessage.Data.Chat.ID),
+			text,
+		),
+	); err != nil {
+		telegramService.errorsChannel <- util.Trace(err)
+		return
 	}
 }
 
 // storeMessages - (gorutine) getting `UpdatedMessage`s from `processStoringChannel` and store it into database
-func (telegramService *TelegramService) StoreMessages(m *sync.Mutex) {
-	for {
-		storingMessage, ok := <-telegramService.storeChannel
-		if ok {
-			// Print received message to CLI
-			log.Printf("Message received: %+v\n", storingMessage)
+func (telegramService *TelegramService) StoreMessages(storingMessage *model.UpdatedMessage) {
+	// Print received message to CLI
+	log.Printf("Message received: %+v\n", storingMessage)
 
-			chat, err := telegramService.chatService.GetChat(storingMessage.Data.Chat.ID)
-			if err != nil {
-				telegramService.errorsChannel <- util.Trace(err)
-				return
-			}
+	chat, err := telegramService.chatService.GetChat(storingMessage.Data.Chat.ID)
+	if err != nil {
+		telegramService.errorsChannel <- util.Trace(err)
+		return
+	}
 
-			messageQueue := modelDB.NewMessageQueueConstructor(
-				storingMessage.QueueId,
-				storingMessage.Data.Text,
-				chat.ID,
-			)
+	messageQueue := modelDB.NewMessageQueueConstructor(
+		storingMessage.QueueId,
+		storingMessage.Data.Text,
+		chat.ID,
+	)
 
-			if _, err = telegramService.manager.Repository.MessageQueue().Create(messageQueue); err != nil {
-				telegramService.errorsChannel <- util.Trace(err)
-				return
-			}
+	if _, err = telegramService.manager.Repository.MessageQueue().Create(messageQueue); err != nil {
+		telegramService.errorsChannel <- util.Trace(err)
+		return
+	}
 
-			if _, err = telegramService.userService.GetUser(storingMessage.Data.Chat.Username, chat.ID); err != nil {
-				telegramService.errorsChannel <- util.Trace(err)
-				return
-			}
+	if _, err = telegramService.userService.GetUser(storingMessage.Data.Chat.Username, chat.ID); err != nil {
+		telegramService.errorsChannel <- util.Trace(err)
+		return
+	}
 
-			// check if the message is notification
-			matchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(messageQueue.Message)
-			if len(matchedValue) > 0 {
-				// processing notification
-				scheduledFor, err := time.Parse("2006-01-02 15:04:05", matchedValue[0])
-				if err != nil {
-					telegramService.errorsChannel <- util.Trace(err)
-					return
-				}
+	// check if the message is notification
+	matchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(messageQueue.Message)
+	if len(matchedValue) > 0 {
+		// processing notification
+		scheduledFor, err := time.Parse("2006-01-02 15:04:05", matchedValue[0])
+		if err != nil {
+			telegramService.errorsChannel <- util.Trace(err)
+			return
+		}
 
-				_, err = telegramService.manager.Repository.NotificationQueue().Create(
-					modelDB.NewNotificationQueueConstructor(
-						messageQueue.ID,
-						messageQueue.ChatId,
-						scheduledFor,
-					),
-				)
-				if err != nil {
-					telegramService.errorsChannel <- util.Trace(err)
-					return
-				}
-			}
-
-			runtime.Gosched()
+		_, err = telegramService.manager.Repository.NotificationQueue().Create(
+			modelDB.NewNotificationQueueConstructor(
+				messageQueue.ID,
+				messageQueue.ChatId,
+				scheduledFor,
+			),
+		)
+		if err != nil {
+			telegramService.errorsChannel <- util.Trace(err)
+			return
 		}
 	}
 }

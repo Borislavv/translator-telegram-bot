@@ -36,13 +36,13 @@ func (bot *TelegramBot) ProcessNotifications() {
 // ProcessMessages - get new messages from TelegramAPI, store it and answer
 func (bot *TelegramBot) ProcessMessages(m *sync.Mutex) {
 	// Notifications provider which will pass messages into `notificationsChannel`
-	go bot.telegramService.GetMessages(m)
+	bot.telegramService.GetMessages(m)
 
-	// Gorutine will started if `storeChannel` receive at least one message
-	go bot.telegramService.StoreMessages(m)
+	// // Gorutine will started if `storeChannel` receive at least one message
+	// go bot.telegramService.StoreMessages(m)
 
-	// Gorutine will started if `notificationsChannel` receive at least one message
-	go bot.telegramService.SendMessages(m)
+	// // Gorutine will started if `notificationsChannel` receive at least one message
+	// go bot.telegramService.SendMessages(m)
 }
 
 // ProcessErrors - (gorutine) simple output of errors with debug info

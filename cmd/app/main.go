@@ -3,9 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"runtime"
 	"sync"
-	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
@@ -30,10 +28,10 @@ func main() {
 	// Init. channels for communication with gorutines
 	// Structures are used, not pointers for communication through channels,
 	// 	since collision occurs when getting target structure by pointer in goroutines
-	messagesChannel := make(chan *model.UpdatedMessage)
-	notificationsChannel := make(chan *modelDB.NotificationQueue)
+	messagesChannel := make(chan *model.UpdatedMessage, 128)
+	notificationsChannel := make(chan *modelDB.NotificationQueue, 128)
 	errorsChannel := make(chan string, 256)
-	storeChannel := make(chan *model.UpdatedMessage)
+	storeChannel := make(chan *model.UpdatedMessage, 128)
 
 	// Creating an instance of Config at first and load it
 	config := config.New().Load(configurationPath, environmentMode)
@@ -87,13 +85,13 @@ func main() {
 
 	bot.ProcessMessages(&m)
 
-	for {
-		runtime.Gosched()
-		// bot.ProcessNotifications()
+	// for {
+	// 	runtime.Gosched()
+	// 	// bot.ProcessNotifications()
 
-		// Timeout
-		time.Sleep(1 * time.Second)
-	}
+	// 	// Timeout
+	// 	time.Sleep(1 * time.Second)
+	// }
 }
 
 // askFlags - getting args. from cli
