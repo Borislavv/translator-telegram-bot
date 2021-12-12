@@ -123,9 +123,7 @@ func (telegramService *TelegramService) GetMessages(m *sync.Mutex) {
 				return
 			}
 
-			m.Lock()
 			telegramService.lastReceivedOffset = offset
-			m.Unlock()
 		}
 
 		messages, err := telegramService.gateway.GetUpdates(model.NewTelegramRequestMessage(telegramService.lastReceivedOffset))
@@ -134,10 +132,9 @@ func (telegramService *TelegramService) GetMessages(m *sync.Mutex) {
 			return
 		}
 
-		m.Lock()
 		for _, message := range messages.Messages {
-			go telegramService.SendMessages(&message)
-			go telegramService.StoreMessages(&message)
+			telegramService.SendMessages(&message)
+			telegramService.StoreMessages(&message)
 
 			// // send message for sending to telegram chat
 			// telegramService.messagesChannel <- &message
@@ -148,7 +145,6 @@ func (telegramService *TelegramService) GetMessages(m *sync.Mutex) {
 		}
 
 		telegramService.lastReceivedOffset = telegramService.lastReceivedOffset + int64(len(messages.Messages))
-		m.Unlock()
 	}
 }
 
