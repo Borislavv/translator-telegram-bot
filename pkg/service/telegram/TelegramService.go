@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"runtime"
 	"sync"
 	"time"
 
@@ -142,9 +143,12 @@ func (telegramService *TelegramService) GetMessages(m *sync.Mutex) {
 
 		}
 		m.Lock()
+
 		telegramService.lastReceivedOffset = telegramService.lastReceivedOffset + int64(len(messages.Messages))
 
 		m.Unlock()
+
+		runtime.Gosched()
 	}
 }
 
