@@ -134,7 +134,7 @@ func (telegramService *TelegramService) GetMessages(m *sync.Mutex) {
 
 		for _, message := range messages.Messages {
 			telegramService.SendMessages(&message)
-			telegramService.StoreMessages(&message)
+			// telegramService.StoreMessages(&message)
 
 			// // send message for sending to telegram chat
 			// telegramService.messagesChannel <- &message
