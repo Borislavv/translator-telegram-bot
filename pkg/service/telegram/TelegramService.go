@@ -131,18 +131,20 @@ func (telegramService *TelegramService) GetMessages(m *sync.Mutex) {
 			telegramService.errorsChannel <- util.Trace(err)
 			return
 		}
-
+		m.Lock()
 		for _, message := range messages.Messages {
-			m.Lock()
+
 			// send message for sending to telegram chat
 			telegramService.messagesChannel <- message
 
 			// send message for save into database
 			telegramService.storeChannel <- message
-			m.Unlock()
+
 		}
 
 		telegramService.lastReceivedOffset = telegramService.lastReceivedOffset + int64(len(messages.Messages))
+
+		m.Unlock()
 	}
 }
 
