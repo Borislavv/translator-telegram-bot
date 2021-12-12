@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
@@ -81,9 +82,13 @@ func main() {
 		}
 	}()
 
+	var m sync.Mutex
+
+	bot.ProcessMessages(&m)
+
 	for {
-		bot.ProcessMessages()
-		bot.ProcessNotifications()
+
+		// bot.ProcessNotifications()
 
 		// Timeout
 		time.Sleep(1 * time.Second)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
@@ -113,46 +114,51 @@ func (telegramService *TelegramService) SendNotifications() {
 }
 
 // GetMessages - (gorutine) receive messages and deliver them to the `messagesChannel` for another goroutine
-func (telegramService *TelegramService) GetMessages() {
-	if telegramService.lastReceivedOffset == 0 {
-		offset, err := telegramService.manager.Repository.MessageQueue().GetOffset()
+func (telegramService *TelegramService) GetMessages(m *sync.Mutex) {
+	for {
+		if telegramService.lastReceivedOffset == 0 {
+			offset, err := telegramService.manager.Repository.MessageQueue().GetOffset()
+			if err != nil {
+				telegramService.errorsChannel <- util.Trace(err)
+				return
+			}
+
+			telegramService.lastReceivedOffset = offset
+		}
+
+		messages, err := telegramService.gateway.GetUpdates(model.NewTelegramRequestMessage(telegramService.lastReceivedOffset))
 		if err != nil {
 			telegramService.errorsChannel <- util.Trace(err)
 			return
 		}
 
-		telegramService.lastReceivedOffset = offset
+		for _, message := range messages.Messages {
+			m.Lock()
+			// send message for sending to telegram chat
+			telegramService.messagesChannel <- message
+
+			// send message for save into database
+			telegramService.storeChannel <- message
+			m.Unlock()
+		}
+
+		telegramService.lastReceivedOffset = telegramService.lastReceivedOffset + int64(len(messages.Messages))
 	}
-
-	messages, err := telegramService.gateway.GetUpdates(model.NewTelegramRequestMessage(telegramService.lastReceivedOffset))
-	if err != nil {
-		telegramService.errorsChannel <- util.Trace(err)
-		return
-	}
-
-	for _, message := range messages.Messages {
-		// send message for sending to telegram chat
-		telegramService.messagesChannel <- message
-
-		// send message for save into database
-		telegramService.storeChannel <- message
-	}
-
-	telegramService.lastReceivedOffset = telegramService.lastReceivedOffset + int64(len(messages.Messages))
 }
 
 // SendMessages - (gorutine) pick up messages from the `messagesChannel` and send them to the telegram chat
-func (telegramService *TelegramService) SendMessages() {
+func (telegramService *TelegramService) SendMessages(m *sync.Mutex) {
 	for {
-		select {
-		case message := <-telegramService.messagesChannel:
-			matchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(message.Data.Text)
+		processingMessage, ok := <-telegramService.messagesChannel
+		if ok {
+			m.Lock()
+			matchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(processingMessage.Data.Text)
 
 			var err error
 			var text string
 			if len(matchedValue) <= 0 {
 				// processing translation
-				text, err = telegramService.translator.TranslateText(message.Data.Text)
+				text, err = telegramService.translator.TranslateText(processingMessage.Data.Text)
 				if err != nil {
 					telegramService.errorsChannel <- util.Trace(err)
 					return
@@ -166,34 +172,39 @@ func (telegramService *TelegramService) SendMessages() {
 
 			if err := telegramService.gateway.SendMessage(
 				model.NewTelegramResponseMessage(
-					fmt.Sprint(message.Data.Chat.ID),
+					fmt.Sprint(processingMessage.Data.Chat.ID),
 					text,
 				),
 			); err != nil {
 				telegramService.errorsChannel <- util.Trace(err)
 				return
 			}
+
+			fmt.Println("DONE: SendMessages")
+			m.Unlock()
 		}
 	}
 }
 
 // storeMessages - (gorutine) getting `UpdatedMessage`s from `processStoringChannel` and store it into database
-func (telegramService *TelegramService) StoreMessages() {
+func (telegramService *TelegramService) StoreMessages(m *sync.Mutex) {
 	for {
-		select {
-		case message := <-telegramService.storeChannel:
-			// Print received message to CLI
-			log.Printf("Message received: %+v\n", message)
+		storingMessage, ok := <-telegramService.storeChannel
+		if ok {
+			m.Lock()
 
-			chat, err := telegramService.chatService.GetChat(message.Data.Chat.ID)
+			// Print received message to CLI
+			log.Printf("Message received: %+v\n", storingMessage)
+
+			chat, err := telegramService.chatService.GetChat(storingMessage.Data.Chat.ID)
 			if err != nil {
 				telegramService.errorsChannel <- util.Trace(err)
 				return
 			}
 
 			messageQueue := modelDB.NewMessageQueueConstructor(
-				message.QueueId,
-				message.Data.Text,
+				storingMessage.QueueId,
+				storingMessage.Data.Text,
 				chat.ID,
 			)
 
@@ -202,7 +213,7 @@ func (telegramService *TelegramService) StoreMessages() {
 				return
 			}
 
-			if _, err = telegramService.userService.GetUser(message.Data.Chat.Username, chat.ID); err != nil {
+			if _, err = telegramService.userService.GetUser(storingMessage.Data.Chat.Username, chat.ID); err != nil {
 				telegramService.errorsChannel <- util.Trace(err)
 				return
 			}
@@ -229,6 +240,9 @@ func (telegramService *TelegramService) StoreMessages() {
 					return
 				}
 			}
+
+			fmt.Println("DONE: StoreMessages")
+			m.Unlock()
 		}
 	}
 }
