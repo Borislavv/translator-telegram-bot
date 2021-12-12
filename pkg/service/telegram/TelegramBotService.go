@@ -3,6 +3,7 @@ package telegram
 import (
 	"log"
 	"sync"
+	"time"
 )
 
 type TelegramBot struct {
@@ -26,28 +27,43 @@ func NewTelegramBot(
 
 // ProcessNotifications - trying to find nots. on next minute and send it into telegram channel
 func (bot *TelegramBot) ProcessNotifications() {
-	// Notifications provider which will pass messages into `notificationsChannel`
-	go bot.telegramService.GetNotifications()
+	var wg sync.WaitGroup
 
-	// Gorutine will started if `notificationsChannel` receive at least one message
-	go bot.telegramService.SendNotifications()
+	for {
+		if notifications := bot.telegramService.GetNotifications(); notifications != nil {
+			wg.Add(1)
+
+			go bot.telegramService.SendNotifications(notifications, &wg)
+		}
+
+		wg.Wait()
+	}
 }
 
 // ProcessMessages - get new messages from TelegramAPI, store it and answer
-func (bot *TelegramBot) ProcessMessages(m *sync.Mutex) {
-	// Notifications provider which will pass messages into `notificationsChannel`
-	bot.telegramService.GetMessages(m)
+func (bot *TelegramBot) ProcessMessages() {
+	var wg sync.WaitGroup
 
-	// // Gorutine will started if `storeChannel` receive at least one message
-	// go bot.telegramService.StoreMessages(m)
+	for {
+		if messages := bot.telegramService.GetMessages(); messages != nil {
+			wg.Add(2)
 
-	// // Gorutine will started if `notificationsChannel` receive at least one message
-	// go bot.telegramService.SendMessages(m)
+			go bot.telegramService.SendMessages(messages, &wg)
+			go bot.telegramService.StoreMessages(messages, &wg)
+		}
+
+		wg.Wait()
+	}
 }
 
 // ProcessErrors - (gorutine) simple output of errors with debug info
 func (bot *TelegramBot) ProcessErrors() {
-	for errMsg := range bot.errorsChannel {
-		log.Println(errMsg)
+	for {
+		select {
+		case message := <-bot.telegramService.errorsChannel:
+			log.Println(message)
+		default:
+			time.Sleep(15 * time.Millisecond)
+		}
 	}
 }

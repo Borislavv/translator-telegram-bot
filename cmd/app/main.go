@@ -3,12 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"sync"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
@@ -26,12 +23,7 @@ func main() {
 	fmt.Println("Initialization")
 
 	// Init. channels for communication with gorutines
-	// Structures are used, not pointers for communication through channels,
-	// 	since collision occurs when getting target structure by pointer in goroutines
-	messagesChannel := make(chan *model.UpdatedMessage, 128)
-	notificationsChannel := make(chan *modelDB.NotificationQueue, 128)
 	errorsChannel := make(chan string, 256)
-	storeChannel := make(chan *model.UpdatedMessage, 128)
 
 	// Creating an instance of Config at first and load it
 	config := config.New().Load(configurationPath, environmentMode)
@@ -61,10 +53,7 @@ func main() {
 		userService,
 		chatService,
 		translator,
-		notificationsChannel,
-		messagesChannel,
 		errorsChannel,
-		storeChannel,
 	)
 
 	// Creating an instance of TelegramBotService
@@ -75,23 +64,12 @@ func main() {
 
 	fmt.Println("Handling messages ...")
 
-	go func() {
-		for {
-			bot.ProcessErrors()
-		}
-	}()
+	go bot.ProcessMessages()
+	go bot.ProcessNotifications()
 
-	var m sync.Mutex
-
-	bot.ProcessMessages(&m)
-
-	// for {
-	// 	runtime.Gosched()
-	// 	// bot.ProcessNotifications()
-
-	// 	// Timeout
-	// 	time.Sleep(1 * time.Second)
-	// }
+	for {
+		bot.ProcessErrors()
+	}
 }
 
 // askFlags - getting args. from cli
