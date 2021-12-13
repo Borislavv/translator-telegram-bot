@@ -30,13 +30,15 @@ func (bot *TelegramBot) ProcessNotifications() {
 	var wg sync.WaitGroup
 
 	for {
-		if notifications := bot.telegramService.GetNotifications(); notifications != nil {
-			wg.Add(1)
+		// Getting notification in a new thread
+		go bot.telegramService.GetNotifications(&wg)
 
-			go bot.telegramService.SendNotifications(notifications, &wg)
-		}
-
+		wg.Add(1)
+		// Sending notification in a new thread
+		go bot.telegramService.SendNotifications(&wg)
 		wg.Wait()
+
+		time.Sleep(5 * time.Second)
 	}
 }
 

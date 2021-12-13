@@ -62,7 +62,9 @@ func NewTelegramService(
 }
 
 // GetNotifications - receiving notification from the database
-func (telegramService *TelegramService) GetNotifications() []*modelDB.NotificationQueue {
+func (telegramService *TelegramService) GetNotifications(wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	dateTime := time.Now()
 	// Handling Timezone colission
 	if telegramService.manager.Config.Environment.Mode == config.ProdMode {
@@ -73,22 +75,19 @@ func (telegramService *TelegramService) GetNotifications() []*modelDB.Notificati
 	notifications, err := telegramService.manager.Repository.NotificationQueue().FindByScheduledDate(dateTime)
 	if err != nil {
 		telegramService.errorsChannel <- util.Trace(err)
-		return nil
+		return
 	}
 
-	var notificationStack []*modelDB.NotificationQueue
 	for _, notification := range notifications {
-		notificationStack = append(notificationStack, notification)
+		telegramService.notificationsChannel <- notification
 	}
-
-	return notificationStack
 }
 
 // SendNotifications - sending notifications to telegram chat
-func (telegramService *TelegramService) SendNotifications(notifications []*modelDB.NotificationQueue, wg *sync.WaitGroup) {
+func (telegramService *TelegramService) SendNotifications(wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	for _, notification := range notifications {
+	for notification := range telegramService.notificationsChannel {
 		// Print that notification is sent to CLI
 		log.Printf("Notification have been sent: %+v\n", notification)
 
@@ -124,7 +123,7 @@ func (telegramService *TelegramService) GetMessages() {
 			offset, err := telegramService.manager.Repository.MessageQueue().GetOffset()
 			if err != nil {
 				telegramService.errorsChannel <- util.Trace(err)
-				return
+				continue
 			}
 
 			telegramService.lastReceivedOffset = offset
@@ -133,7 +132,7 @@ func (telegramService *TelegramService) GetMessages() {
 		messages, err := telegramService.gateway.GetUpdates(model.NewTelegramRequestMessage(telegramService.lastReceivedOffset))
 		if err != nil {
 			telegramService.errorsChannel <- util.Trace(err)
-			return
+			continue
 		}
 
 		for _, message := range messages.Messages {

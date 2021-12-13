@@ -74,9 +74,7 @@ func main() {
 	fmt.Println("Handling messages ...")
 
 	bot.ProcessMessages()
-
-	// go bot.ProcessNotifications()
-
+	bot.ProcessNotifications()
 	bot.ProcessErrors()
 
 	for {
