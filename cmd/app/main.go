@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
@@ -66,9 +67,10 @@ func main() {
 
 	go bot.ProcessMessages()
 	go bot.ProcessNotifications()
+	go bot.ProcessErrors()
 
 	for {
-		bot.ProcessErrors()
+		time.Sleep(15 * time.Millisecond)
 	}
 }
 
