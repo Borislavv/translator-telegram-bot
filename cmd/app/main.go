@@ -26,12 +26,10 @@ func main() {
 	fmt.Println("Initialization")
 
 	// Init. channels for communication with gorutines
-	// Structures are used, not pointers for communication through channels,
-	// 	since collision occurs when getting target structure by pointer in goroutines
-	messagesChannel := make(chan model.UpdatedMessage, 128)
-	notificationsChannel := make(chan modelDB.NotificationQueue, 128)
-	errorsChannel := make(chan string, 256)
-	storeChannel := make(chan model.UpdatedMessage, 128)
+	messagesChannel := make(chan *model.UpdatedMessage, 128)
+	notificationsChannel := make(chan *modelDB.NotificationQueue, 128)
+	storeChannel := make(chan *model.UpdatedMessage, 128)
+	errorsChannel := make(chan string, 512)
 
 	// Creating an instance of Config at first and load it
 	config := config.New().Load(configurationPath, environmentMode)
@@ -61,10 +59,10 @@ func main() {
 		userService,
 		chatService,
 		translator,
-		notificationsChannel,
 		messagesChannel,
-		errorsChannel,
+		notificationsChannel,
 		storeChannel,
+		errorsChannel,
 	)
 
 	// Creating an instance of TelegramBotService
@@ -75,18 +73,12 @@ func main() {
 
 	fmt.Println("Handling messages ...")
 
-	go func() {
-		for {
-			bot.ProcessErrors()
-		}
-	}()
+	bot.ProcessMessages()
+	bot.ProcessNotifications()
+	bot.ProcessErrors()
 
 	for {
-		bot.ProcessMessages()
-		bot.ProcessNotifications()
-
-		// Timeout
-		time.Sleep(1 * time.Second)
+		time.Sleep(15 * time.Millisecond)
 	}
 }
 

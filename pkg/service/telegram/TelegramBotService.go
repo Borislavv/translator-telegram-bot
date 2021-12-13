@@ -2,6 +2,8 @@ package telegram
 
 import (
 	"log"
+	"sync"
+	"time"
 )
 
 type TelegramBot struct {
@@ -25,28 +27,43 @@ func NewTelegramBot(
 
 // ProcessNotifications - trying to find nots. on next minute and send it into telegram channel
 func (bot *TelegramBot) ProcessNotifications() {
-	// Notifications provider which will pass messages into `notificationsChannel`
-	go bot.telegramService.GetNotifications()
+	var wg sync.WaitGroup
 
-	// Gorutine will started if `notificationsChannel` receive at least one message
-	go bot.telegramService.SendNotifications()
+	for {
+		// Getting notification in a new thread
+		go bot.telegramService.GetNotifications(&wg)
+
+		wg.Add(1)
+		// Sending notification in a new thread
+		go bot.telegramService.SendNotifications(&wg)
+		wg.Wait()
+
+		time.Sleep(5 * time.Second)
+	}
 }
 
 // ProcessMessages - get new messages from TelegramAPI, store it and answer
 func (bot *TelegramBot) ProcessMessages() {
-	// Notifications provider which will pass messages into `notificationsChannel`
+	// Getting messages in a new thread
 	go bot.telegramService.GetMessages()
 
-	// Gorutine will started if `storeChannel` receive at least one message
-	go bot.telegramService.StoreMessages()
-
-	// Gorutine will started if `notificationsChannel` receive at least one message
+	// Sending message in a new thread
 	go bot.telegramService.SendMessages()
+
+	// Saving message in a new thread
+	go bot.telegramService.StoreMessages()
 }
 
 // ProcessErrors - (gorutine) simple output of errors with debug info
 func (bot *TelegramBot) ProcessErrors() {
-	for errMsg := range bot.errorsChannel {
-		log.Println(errMsg)
-	}
+	go func() {
+		for {
+			select {
+			case message := <-bot.telegramService.errorsChannel:
+				log.Println(message)
+			default:
+				time.Sleep(15 * time.Millisecond)
+			}
+		}
+	}()
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
@@ -26,10 +27,10 @@ type TelegramService struct {
 	translator  *translator.TranslatorService
 
 	// Channels
-	notificationsChannel chan modelDB.NotificationQueue
-	messagesChannel      chan model.UpdatedMessage
+	messagesChannel      chan *model.UpdatedMessage
+	notificationsChannel chan *modelDB.NotificationQueue
+	storechannel         chan *model.UpdatedMessage
 	errorsChannel        chan string
-	storeChannel         chan model.UpdatedMessage
 
 	// Cached values
 	lastReceivedOffset int64
@@ -42,10 +43,10 @@ func NewTelegramService(
 	userService *service.UserService,
 	chatService *service.ChatService,
 	translator *translator.TranslatorService,
-	notificationsChannel chan modelDB.NotificationQueue,
-	messagesChannel chan model.UpdatedMessage,
+	messagesChannel chan *model.UpdatedMessage,
+	notificationsChannel chan *modelDB.NotificationQueue,
+	storeChannel chan *model.UpdatedMessage,
 	errorsChannel chan string,
-	storeChannel chan model.UpdatedMessage,
 ) *TelegramService {
 	return &TelegramService{
 		manager:              manager,
@@ -53,15 +54,17 @@ func NewTelegramService(
 		userService:          userService,
 		chatService:          chatService,
 		translator:           translator,
-		notificationsChannel: notificationsChannel,
 		messagesChannel:      messagesChannel,
+		notificationsChannel: notificationsChannel,
+		storechannel:         storeChannel,
 		errorsChannel:        errorsChannel,
-		storeChannel:         storeChannel,
 	}
 }
 
-// GetNotifications - (gorutine) receive notifications and deliver them to the `notificationChannel` for another goroutine
-func (telegramService *TelegramService) GetNotifications() {
+// GetNotifications - receiving notification from the database
+func (telegramService *TelegramService) GetNotifications(wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	dateTime := time.Now()
 	// Handling Timezone colission
 	if telegramService.manager.Config.Environment.Mode == config.ProdMode {
@@ -75,14 +78,15 @@ func (telegramService *TelegramService) GetNotifications() {
 		return
 	}
 
-	// Providing notifications to channel for  another gorutine
 	for _, notification := range notifications {
-		telegramService.notificationsChannel <- *notification
+		telegramService.notificationsChannel <- notification
 	}
 }
 
-// SendNotifications - (gorutine) pick up notifications from the `notificationsChannel` and send them to the telegram chat
-func (telegramService *TelegramService) SendNotifications() {
+// SendNotifications - sending notifications to telegram chat
+func (telegramService *TelegramService) SendNotifications(wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	for notification := range telegramService.notificationsChannel {
 		// Print that notification is sent to CLI
 		log.Printf("Notification have been sent: %+v\n", notification)
@@ -104,7 +108,7 @@ func (telegramService *TelegramService) SendNotifications() {
 			continue
 		}
 
-		_, err = telegramService.manager.Repository.NotificationQueue().MakeAsSent(&notification)
+		_, err = telegramService.manager.Repository.NotificationQueue().MakeAsSent(notification)
 		if err != nil {
 			telegramService.errorsChannel <- util.Trace(err)
 			continue
@@ -112,36 +116,43 @@ func (telegramService *TelegramService) SendNotifications() {
 	}
 }
 
-// GetMessages - (gorutine) receive messages and deliver them to the `messagesChannel` for another goroutine
+// GetMessages - receive messages from telegram chat
 func (telegramService *TelegramService) GetMessages() {
-	if telegramService.lastReceivedOffset == 0 {
-		offset, err := telegramService.manager.Repository.MessageQueue().GetOffset()
-		if err != nil {
-			telegramService.errorsChannel <- util.Trace(err)
-			return
+	for {
+		if telegramService.lastReceivedOffset == 0 {
+			offset, err := telegramService.manager.Repository.MessageQueue().GetOffset()
+			if err != nil {
+				telegramService.errorsChannel <- util.Trace(err)
+				continue
+			}
+
+			telegramService.lastReceivedOffset = offset
 		}
 
-		telegramService.lastReceivedOffset = offset
+		messages, err := telegramService.gateway.GetUpdates(model.NewTelegramRequestMessage(telegramService.lastReceivedOffset))
+		if err != nil {
+			telegramService.errorsChannel <- util.Trace(err)
+			continue
+		}
+
+		for _, message := range messages.Messages {
+			// Run `SendMessages` gorutine
+			telegramService.messagesChannel <- &message
+
+			// Run `StoreMessages` gorutine
+			telegramService.storechannel <- &message
+
+			// Log info of message received
+			log.Printf("Message received: %+v\n", message)
+		}
+
+		telegramService.lastReceivedOffset = telegramService.lastReceivedOffset + int64(len(messages.Messages))
+
+		time.Sleep(15 * time.Millisecond)
 	}
-
-	messages, err := telegramService.gateway.GetUpdates(model.NewTelegramRequestMessage(telegramService.lastReceivedOffset))
-	if err != nil {
-		telegramService.errorsChannel <- util.Trace(err)
-		return
-	}
-
-	for _, message := range messages.Messages {
-		// send message for sending to telegram chat
-		telegramService.messagesChannel <- message
-
-		// send message for save into database
-		telegramService.storeChannel <- message
-	}
-
-	telegramService.lastReceivedOffset = telegramService.lastReceivedOffset + int64(len(messages.Messages))
 }
 
-// SendMessages - (gorutine) pick up messages from the `messagesChannel` and send them to the telegram chat
+// SendMessages - sending message to telegram chat
 func (telegramService *TelegramService) SendMessages() {
 	for {
 		select {
@@ -155,7 +166,7 @@ func (telegramService *TelegramService) SendMessages() {
 				text, err = telegramService.translator.TranslateText(message.Data.Text)
 				if err != nil {
 					telegramService.errorsChannel <- util.Trace(err)
-					return
+					continue
 				}
 
 				text = "Tranlsation: " + text
@@ -171,24 +182,23 @@ func (telegramService *TelegramService) SendMessages() {
 				),
 			); err != nil {
 				telegramService.errorsChannel <- util.Trace(err)
-				return
+				continue
 			}
+
+			log.Printf("Message was sent: %+v\n", message)
 		}
 	}
 }
 
-// storeMessages - (gorutine) getting `UpdatedMessage`s from `processStoringChannel` and store it into database
+// storeMessages - storing messages and notification into database
 func (telegramService *TelegramService) StoreMessages() {
 	for {
 		select {
-		case message := <-telegramService.storeChannel:
-			// Print received message to CLI
-			log.Printf("Message received: %+v\n", message)
-
+		case message := <-telegramService.storechannel:
 			chat, err := telegramService.chatService.GetChat(message.Data.Chat.ID)
 			if err != nil {
 				telegramService.errorsChannel <- util.Trace(err)
-				return
+				continue
 			}
 
 			messageQueue := modelDB.NewMessageQueueConstructor(
@@ -199,12 +209,12 @@ func (telegramService *TelegramService) StoreMessages() {
 
 			if _, err = telegramService.manager.Repository.MessageQueue().Create(messageQueue); err != nil {
 				telegramService.errorsChannel <- util.Trace(err)
-				return
+				continue
 			}
 
 			if _, err = telegramService.userService.GetUser(message.Data.Chat.Username, chat.ID); err != nil {
 				telegramService.errorsChannel <- util.Trace(err)
-				return
+				continue
 			}
 
 			// check if the message is notification
@@ -214,7 +224,7 @@ func (telegramService *TelegramService) StoreMessages() {
 				scheduledFor, err := time.Parse("2006-01-02 15:04:05", matchedValue[0])
 				if err != nil {
 					telegramService.errorsChannel <- util.Trace(err)
-					return
+					continue
 				}
 
 				_, err = telegramService.manager.Repository.NotificationQueue().Create(
@@ -226,9 +236,11 @@ func (telegramService *TelegramService) StoreMessages() {
 				)
 				if err != nil {
 					telegramService.errorsChannel <- util.Trace(err)
-					return
+					continue
 				}
 			}
+
+			log.Printf("Message was stored: %+v\n", message)
 		}
 	}
 }
