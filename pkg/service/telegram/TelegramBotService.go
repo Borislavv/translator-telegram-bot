@@ -42,28 +42,21 @@ func (bot *TelegramBot) ProcessNotifications() {
 
 // ProcessMessages - get new messages from TelegramAPI, store it and answer
 func (bot *TelegramBot) ProcessMessages() {
-	var wg sync.WaitGroup
-
-	for {
-		if messages := bot.telegramService.GetMessages(); messages != nil {
-			wg.Add(2)
-
-			go bot.telegramService.SendMessages(messages, &wg)
-			go bot.telegramService.StoreMessages(messages, &wg)
-		}
-
-		wg.Wait()
-	}
+	go bot.telegramService.GetMessages()
+	go bot.telegramService.SendMessages()
+	go bot.telegramService.StoreMessages()
 }
 
 // ProcessErrors - (gorutine) simple output of errors with debug info
 func (bot *TelegramBot) ProcessErrors() {
-	for {
-		select {
-		case message := <-bot.telegramService.errorsChannel:
-			log.Println(message)
-		default:
-			time.Sleep(15 * time.Millisecond)
+	go func() {
+		for {
+			select {
+			case message := <-bot.telegramService.errorsChannel:
+				log.Println(message)
+			default:
+				time.Sleep(15 * time.Millisecond)
+			}
 		}
-	}
+	}()
 }

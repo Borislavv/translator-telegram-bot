@@ -7,6 +7,8 @@ import (
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
@@ -24,7 +26,10 @@ func main() {
 	fmt.Println("Initialization")
 
 	// Init. channels for communication with gorutines
-	errorsChannel := make(chan string, 256)
+	messagesChannel := make(chan *model.UpdatedMessage, 128)
+	notificationsChannel := make(chan *modelDB.NotificationQueue, 128)
+	storeChannel := make(chan *model.UpdatedMessage, 128)
+	errorsChannel := make(chan string, 512)
 
 	// Creating an instance of Config at first and load it
 	config := config.New().Load(configurationPath, environmentMode)
@@ -54,6 +59,9 @@ func main() {
 		userService,
 		chatService,
 		translator,
+		messagesChannel,
+		notificationsChannel,
+		storeChannel,
 		errorsChannel,
 	)
 
@@ -65,9 +73,11 @@ func main() {
 
 	fmt.Println("Handling messages ...")
 
-	go bot.ProcessMessages()
-	go bot.ProcessNotifications()
-	go bot.ProcessErrors()
+	bot.ProcessMessages()
+
+	// go bot.ProcessNotifications()
+
+	bot.ProcessErrors()
 
 	for {
 		time.Sleep(15 * time.Millisecond)
