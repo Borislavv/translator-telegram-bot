@@ -3,10 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/handler"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
@@ -68,18 +68,22 @@ func main() {
 	// Creating an instance of TelegramBotService
 	bot := telegram.NewTelegramBot(telegramService, errorsChannel)
 
+	server := handler.NewHandler(manager)
+
 	// Close connection with database in defer
 	defer manager.Repository.Close()
 
 	fmt.Println("Handling messages ...")
 
+	go func() {
+		server.HandleDashboard()
+		server.ServeStaticFiles()
+		server.ListenAndServe()
+	}()
+
 	bot.ProcessMessages()
 	bot.ProcessNotifications()
 	bot.ProcessErrors()
-
-	for {
-		time.Sleep(15 * time.Millisecond)
-	}
 }
 
 // askFlags - getting args. from cli
