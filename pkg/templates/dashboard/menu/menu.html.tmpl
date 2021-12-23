@@ -1,0 +1,16 @@
+{{template "base" .}}
+
+{{define "menu"}}
+    <ul class="navbar-nav mr-auto">
+        {{if .Menu}}
+            {{range .Menu.Items}}
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{.Link}}">{{.Title}}</a>
+                </li>
+            {{end}}
+
+        {{else}}
+            Menu is not exists
+        {{end}}
+    </ul>
+{{end}}
