@@ -25,6 +25,7 @@ type Config struct {
 	Repository  *repository.RepositoryConfig
 	Environment *Environment
 	Integration *IntegrationConfig
+	Server      *ServerConfig
 }
 
 // NewConfig - creating a new instance of Config
@@ -33,6 +34,7 @@ func New() *Config {
 		Repository:  repository.NewRepositoryConfig(),
 		Environment: &Environment{ProdMode},
 		Integration: NewIntegrationConfig(),
+		Server:      NewServerConfig(),
 	}
 }
 
@@ -43,6 +45,12 @@ func (config *Config) Load(configurationPath string, environmentMode string) *Co
 
 	// Database config loading
 	_, err := toml.DecodeFile(configurationPath, config.Repository)
+	if err != nil {
+		log.Fatalln(util.Trace(err))
+	}
+
+	// Server config loading
+	_, err = toml.DecodeFile(configurationPath, config.Server)
 	if err != nil {
 		log.Fatalln(util.Trace(err))
 	}
