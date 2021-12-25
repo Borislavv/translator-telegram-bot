@@ -28,9 +28,7 @@
 
             <main role="main" class="container">
                 <div class="jumbotron">
-                    <hr>
-                        <h1 class="jumbotron-base-title" align="center">Dashboard of helper TelegramBot (@JaredijBot)</h1>
-                    <hr>
+                    <h1 class="jumbotron-base-title" align="center">Dashboard of helper TelegramBot (@JaredijBot)</h1><hr>
 
                     <p class="lead" align="center">
                         This dashboard will help you track your notifications and continue using the bot's convenience in the web interface.
@@ -45,6 +43,9 @@
                     <!-- Including `content` tempalte -->
                     {{template "content" .}}
                 </div>
+
+                <!-- Including `subContent` tempalte -->
+                {{template "subContent" .}}
             </main>
 
             <!-- JavaScripts -->

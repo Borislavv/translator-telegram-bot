@@ -1,5 +1,18 @@
 {{template "base" .}}
 
 {{define "content"}}
-    <h2 align="center" class="jumbotron-base-title">Main</h2><hr>
+    <h2 align="center" class="jumbotron-base-title">
+        <a href="{{.Content.TitleLink}}">{{.Content.Title}}</a>
+    </h2><hr>
+    
+    <div align="center">
+        <p><h4>Hello in the TelegramBot help desk</h4></p>
+
+        <p>If you are using this system in first time, then you need log in for get full power of Notifications and Translation sections.</p>
+
+        <p>In direct meaning, this system is help desk which displays your notifications which have been sent to bot from your telegram client.</p>
+
+        <p>For log in the system, you need to get a special secret token from telegram client of bot chat, 
+            just write `/token`, copy it and past <a href="{{.Content.LoginByTokenLink}}">here</a>.</p>
+    </div>
 {{end}}
