@@ -14,6 +14,7 @@ func (dashboard *Dashboard) TranslationPage(w http.ResponseWriter, r *http.Reque
 	templates := []string{
 		"./pkg/templates/dashboard/pages/translation/content.html.tmpl",
 		"./pkg/templates/dashboard/menu/menu.html.tmpl",
+		"./pkg/templates/empty.subContent.html.tmpl",
 		"./pkg/templates/base.html.tmpl",
 	}
 

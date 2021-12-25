@@ -14,6 +14,7 @@ func (dashboard *Dashboard) DocsPage(w http.ResponseWriter, r *http.Request) {
 	templates := []string{
 		"./pkg/templates/dashboard/pages/docs/content.html.tmpl",
 		"./pkg/templates/dashboard/menu/menu.html.tmpl",
+		"./pkg/templates/empty.subContent.html.tmpl",
 		"./pkg/templates/base.html.tmpl",
 	}
 

@@ -14,6 +14,7 @@ func (dashboard *Dashboard) NotificationsPage(w http.ResponseWriter, r *http.Req
 	templates := []string{
 		"./pkg/templates/dashboard/pages/notifications/content.html.tmpl",
 		"./pkg/templates/dashboard/menu/menu.html.tmpl",
+		"./pkg/templates/empty.subContent.html.tmpl",
 		"./pkg/templates/base.html.tmpl",
 	}
 
