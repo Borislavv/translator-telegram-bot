@@ -10,6 +10,7 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/dashboard/tokenGenerator"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
 )
@@ -52,6 +53,8 @@ func main() {
 	// Creating an instance of TranslatorService
 	translator := translator.NewTranslatorService(translatorGateway)
 
+	tokenGenerator := tokenGenerator.NewTokenGenerator()
+
 	// Creating an instace of TelegramService
 	telegramService := telegram.NewTelegramService(
 		manager,
@@ -59,6 +62,7 @@ func main() {
 		userService,
 		chatService,
 		translator,
+		tokenGenerator,
 		messagesChannel,
 		notificationsChannel,
 		storeChannel,
@@ -68,16 +72,16 @@ func main() {
 	// Creating an instance of TelegramBotService
 	bot := telegram.NewTelegramBot(telegramService, errorsChannel)
 
-	server := handler.NewHandler(manager)
-
 	// Close connection with database in defer
 	defer manager.Repository.Close()
 
 	fmt.Println("Handling messages ...")
 
+	// HTTP server which handle Dashboard
 	go func() {
+		server := handler.NewHandler(manager)
 		server.HandleDashboard()
-		server.ServeStaticFiles()
+		server.HandleStaticFiles()
 		server.ListenAndServe()
 	}()
 
