@@ -37,8 +37,8 @@ func (handler *Handler) HandleDashboard() {
 	handler.dashboard.HandleTheAboutPage()
 }
 
-// ServeStaticFiles - will serve static files in the passed dir.
-func (handler *Handler) ServeStaticFiles() {
+// HandleStaticFiles - will serve static files in the passed dir.
+func (handler *Handler) HandleStaticFiles() {
 	dir := handler.manager.Config.Server.StaticFilesDir
 	if dir == "" {
 		dir = defaultDir
