@@ -9,8 +9,15 @@
                 </li>
             {{end}}
 
-        {{else}}
-            Menu is not exists
+            {{if .User}}
+                <span class="badge badge-danger">
+                    <a class="nav-link" href="/logout">Logout from {{.User.Username}} account</a>
+                </span>
+            {{else}}
+                <span class="badge badge-success">
+                    <a class="nav-link" href="/login">Login</a>
+                </span>
+            {{end}}
         {{end}}
     </ul>
 {{end}}
