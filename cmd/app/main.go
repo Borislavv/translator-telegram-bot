@@ -10,7 +10,7 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/service/dashboard/tokenGenerator"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/dashboardService"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
 )
@@ -30,6 +30,7 @@ func main() {
 	messagesChannel := make(chan *model.UpdatedMessage, 128)
 	notificationsChannel := make(chan *modelDB.NotificationQueue, 128)
 	storeChannel := make(chan *model.UpdatedMessage, 128)
+	tokensChannel := make(chan *model.TokenMessage, 128)
 	errorsChannel := make(chan string, 512)
 
 	// Creating an instance of Config at first and load it
@@ -47,13 +48,20 @@ func main() {
 	// Creating an instance of ChatService
 	chatService := service.NewChatService(manager)
 
+	// Creating an instance of NotificationService
+	notificationService := service.NewNotificationService(manager)
+
 	// Creating an instance of TranslatorGateway
 	translatorGateway := translator.NewTranslatorGateway(manager)
 
 	// Creating an instance of TranslatorService
 	translator := translator.NewTranslatorService(translatorGateway)
 
-	tokenGenerator := tokenGenerator.NewTokenGenerator()
+	// Creating an instance of AuthService
+	auth := dashboardService.NewAuthService(manager, userService)
+
+	// Creating an instance of TokenGenerator
+	tokenGenerator := dashboardService.NewTokenGenerator()
 
 	// Creating an instace of TelegramService
 	telegramService := telegram.NewTelegramService(
@@ -66,6 +74,7 @@ func main() {
 		messagesChannel,
 		notificationsChannel,
 		storeChannel,
+		tokensChannel,
 		errorsChannel,
 	)
 
@@ -79,7 +88,7 @@ func main() {
 
 	// HTTP server which handle Dashboard
 	go func() {
-		server := handler.NewHandler(manager)
+		server := handler.NewHandler(manager, auth, notificationService)
 		server.HandleDashboard()
 		server.HandleStaticFiles()
 		server.ListenAndServe()
