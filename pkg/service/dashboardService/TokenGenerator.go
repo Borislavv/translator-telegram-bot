@@ -1,4 +1,4 @@
-package tokenGenerator
+package dashboardService
 
 import (
 	"crypto/rand"
@@ -7,7 +7,7 @@ import (
 
 var (
 	salt        int = 9
-	tokenLength int = 118
+	tokenLength int = 56
 )
 
 type TokenGenerator struct {

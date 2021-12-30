@@ -1,4 +1,4 @@
-package dashboard
+package dashboardService
 
 type DashboardService struct {
 }
