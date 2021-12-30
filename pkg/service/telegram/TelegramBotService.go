@@ -47,11 +47,14 @@ func (bot *TelegramBot) ProcessMessages() {
 	// Getting messages in a new thread
 	go bot.telegramService.GetMessages()
 
-	// Sending message in a new thread
+	// Sending messages in a new thread
 	go bot.telegramService.SendMessages()
 
-	// Saving message in a new thread
+	// Saving messages in a new thread
 	go bot.telegramService.StoreMessages()
+
+	// Saving tokens in a new thread
+	go bot.telegramService.StoreTokens()
 }
 
 // ProcessErrors - (gorutine) simple output of errors with debug info

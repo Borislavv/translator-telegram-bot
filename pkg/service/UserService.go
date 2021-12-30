@@ -32,7 +32,7 @@ func (userService *UserService) GetUser(username string, chatId int64) (*modelDB
 			return nil, err
 		} else {
 			// user was not fonud, then create and store it
-			if dbUser.ID <= 0 {
+			if dbUser == nil {
 				newUser := modelDB.NewUser()
 				newUser.ChatId = chatId
 				newUser.Username = username
@@ -51,4 +51,18 @@ func (userService *UserService) GetUser(username string, chatId int64) (*modelDB
 	}
 
 	return userService.Cache[username], nil
+}
+
+// SetToken - setting token to user
+func (userService *UserService) SetToken(user *modelDB.User, token string) (*modelDB.User, error) {
+	user, err := userService.manager.Repository.User().SetToken(user, token)
+	if err != nil {
+		log.Println(util.Trace(err))
+		return nil, err
+	}
+
+	// update user instance in cache
+	userService.Cache[user.Username] = user
+
+	return user, nil
 }
