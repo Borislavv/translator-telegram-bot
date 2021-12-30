@@ -1,8 +1,9 @@
-package dashboard
+package dashboardHandler
 
 import (
 	"net/http"
 
+	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDashboard"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
@@ -29,8 +30,15 @@ func (dashboard *Dashboard) IndexPage(w http.ResponseWriter, r *http.Request) {
 	page.AddConent(Content{
 		Title:            "Translator-telegram-bot",
 		TitleLink:        "https://github.com/Borislavv/Translator-telegram-bot",
-		LoginByTokenLink: "/login/token",
+		LoginByTokenLink: "/login",
 	})
+	authData, err := model.NewAuthCookieData(w, r)
+	if err == nil {
+		cachedUser, err := dashboard.authService.GetUserFromCache(authData)
+		if err == nil {
+			page.AddUser(cachedUser)
+		}
+	}
 
 	util.RenderFromFiles(w, templates, page)
 }
