@@ -8,6 +8,7 @@ type User struct {
 	ID        int64
 	ChatId    int64
 	Username  string
+	Token     string
 	CreatedAt time.Time
 }
 

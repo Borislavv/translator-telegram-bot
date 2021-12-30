@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelInterface"
 )
 
 type NotificationQueueRepository struct {
@@ -35,12 +36,16 @@ func (repository *NotificationQueueRepository) FindByScheduledDate(dateTime time
 		"SELECT nq.id, msg.message, c.external_chat_id FROM notification_queue `nq`"+
 			" LEFT JOIN chat `c` ON nq.chat_id = c.id "+
 			" LEFT JOIN message_queue `msg` ON nq.message_queue_id = msg.id"+
-			" WHERE is_sent = 0 AND scheduled_for <= ?",
+			" WHERE nq.is_sent = 0 AND nq.scheduled_for <= ?",
 		dateTime.Add(1*time.Minute).Format("2006-01-02 15:04:05"),
 	)
 
 	// Close rows anyway
-	defer rows.Close()
+	defer func() {
+		if rows != nil {
+			rows.Close()
+		}
+	}()
 
 	if err != nil {
 		return nil, err
@@ -53,6 +58,63 @@ func (repository *NotificationQueueRepository) FindByScheduledDate(dateTime time
 			&notification.ID,
 			&notification.Message,
 			&notification.ExternalChatId,
+		); err != nil {
+			return nil, err
+		}
+
+		// adding row to response slice
+		responseStack = append(responseStack, notification)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return responseStack, nil
+}
+
+// FindNotSentByUsername - trying to find actual (scheduledAt > currentTime) notification by username
+func (repository *NotificationQueueRepository) FindNotSentByUsername(
+	username string,
+	pagination modelInterface.PaginationInterface,
+) ([]*modelDB.NotificationQueue, error) {
+	var responseStack []*modelDB.NotificationQueue
+
+	queryStr := "SELECT msg.message, nq.scheduled_for FROM notification_queue `nq`" +
+		" LEFT JOIN chat `c` ON nq.chat_id = c.id" +
+		" LEFT JOIN user `u` ON c.id = u.chat_id" +
+		" LEFT JOIN message_queue `msg` ON nq.message_queue_id = msg.id" +
+		" WHERE nq.is_sent = 0 AND u.username = ?" +
+		" ORDER BY nq.scheduled_for ASC"
+
+	if pagination.NeedPaginate() {
+		queryStr += " LIMIT ? OFFSET ?"
+	}
+
+	rows, err := repository.connection.db.Query(
+		queryStr,
+		username,
+		pagination.GetLimit(),
+		(pagination.GetPage()-1)*pagination.GetLimit(),
+	)
+
+	// Close rows anyway
+	defer func() {
+		if rows != nil {
+			rows.Close()
+		}
+	}()
+
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		notification := modelDB.NewNotificationQueue()
+
+		if err = rows.Scan(
+			&notification.Message,
+			&notification.ScheduledFor,
 		); err != nil {
 			return nil, err
 		}
