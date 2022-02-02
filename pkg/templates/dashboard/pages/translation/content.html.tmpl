@@ -1,5 +1,51 @@
 {{template "base" .}}
 
 {{define "content"}}
-    <h2 align="center" class="jumbotron-base-title">Translation</h2><hr>
+    <h2 align="center" class="jumbotron-base-title">
+        <a href="javascript:void(0)" class="content-header" style="pointer-events: none;" disabled>Translation</a>
+    </h2><hr>
+
+    {{if not .Content.ErrorMessage}}
+        <form>
+            <div class="form-group">
+                <label for="getTranslationContainer"><small>Type word or phrase and tap <b>ENTER</b> for translate:</small></label>
+                <textarea class="form-control" id="getTranslationContainer" rows="3"></textarea><br>
+                <textarea class="form-control" id="setTranslationContainer" rows="3"></textarea>
+            </div>
+        </form>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                $("#getTranslationContainer").on("keypress", function(e) {
+                    if (e.which == 13) {
+                        let data = {
+                            "text": e.currentTarget.value
+                        };
+
+                        $.ajax({
+                            url: {{.Content.TranslationUrl}},
+                            type: "POST",
+                            dataType: "json",
+                            contentType: 'application/json',
+                            data: JSON.stringify(data),
+                        }).done(function(response) {
+                            $("#setTranslationContainer").val(response.text);
+                        });
+                    }
+                });
+
+                $("#getTranslationContainer").bind("input propertychange", function(e) {
+                    if (e.currentTarget.value == "") {
+                        $("#setTranslationContainer").val("");
+                    }
+                });
+            });
+        </script>
+    {{else}}
+        <div class="alert alert-danger" role="alert">
+            {{.Content.ErrorMessage}}
+
+            <hr><a href="{{.Content.LoginByTokenLink}}">Login >></a>
+        </div>
+    {{end}}
 {{end}}

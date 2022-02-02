@@ -88,7 +88,7 @@ func main() {
 
 	// HTTP server which handle Dashboard
 	go func() {
-		server := handler.NewHandler(manager, auth, notificationService)
+		server := handler.NewHandler(manager, auth, notificationService, translator)
 		server.HandleDashboard()
 		server.HandleStaticFiles()
 		server.ListenAndServe()

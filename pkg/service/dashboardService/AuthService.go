@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
@@ -64,24 +65,35 @@ func (auth *AuthService) Login(authData modelInterface.UserAuthInterface) (*mode
 	return auth.GetUserFromCache(authData)
 }
 
-// IsAuthorized - check the user is authorized and isset in cache
+// IsAuthorized - check the user is authorized and isset in cache if not do logout action
 func (auth *AuthService) IsAuthorized(authData modelInterface.UserAuthInterface) bool {
+	if !auth.isAuthorized(authData) {
+		auth.Logout(authData)
+
+		return false
+	}
+
+	return true
+}
+
+// isAuthorized - check the user is authorized and isset in cache
+func (auth *AuthService) isAuthorized(authData modelInterface.UserAuthInterface) bool {
 	// trying to find user into cache
-	_, err := auth.GetUserFromCache(authData)
+	user, err := auth.GetUserFromCache(authData)
 	if err == nil {
-		return true
+		return user.Token == authData.GetToken()
 	}
 
 	// trying to find user into database
-	_, err = auth.manager.Repository.User().FindByToken(authData.GetToken())
+	user, err = auth.manager.Repository.User().FindByToken(authData.GetToken())
 	if err == nil {
-		return true
+		return strings.ToLower(user.Username) == strings.ToLower(authData.GetUsername())
 	}
 
 	return false
 }
 
-// GetUserFromCache - loading user from cache by authData
+// GetUserFromCache - loading user from or into cache by authData
 func (auth *AuthService) GetUserFromCache(authData modelInterface.UserAuthInterface) (*modelDB.User, error) {
 	if _, issetInCache := auth.userService.Cache[authData.GetUsername()]; issetInCache {
 		return auth.userService.Cache[authData.GetUsername()], nil

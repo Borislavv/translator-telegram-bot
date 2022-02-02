@@ -6,6 +6,7 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/dashboardService"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
 )
 
 // Facade of Dashboard pages
@@ -13,6 +14,7 @@ type Dashboard struct {
 	manager             *manager.Manager
 	authService         *dashboardService.AuthService
 	notificationService *service.NotificationService
+	translatorService   *translator.TranslatorService
 }
 
 // NewDashboard - constructor of Dashboard struct
@@ -20,11 +22,13 @@ func NewDashboard(
 	manager *manager.Manager,
 	authService *dashboardService.AuthService,
 	notificationService *service.NotificationService,
+	translationService *translator.TranslatorService,
 ) *Dashboard {
 	return &Dashboard{
 		manager:             manager,
 		authService:         authService,
 		notificationService: notificationService,
+		translatorService:   translationService,
 	}
 }
 
@@ -61,4 +65,9 @@ func (dashboard *Dashboard) HandleTheLoginPage() {
 // HandleTheLogoutPage - handle the `logout` page as controller method
 func (dashboard *Dashboard) HandleTheLogoutPage() {
 	http.HandleFunc("/logout", dashboard.LogoutPage)
+}
+
+// HandleTheLogoutPage - handle the `/api/v1/translate` route as controller method
+func (dashboard *Dashboard) HandleTheTranslationAPI() {
+	http.HandleFunc("/api/v1/translate", dashboard.TranslationAPI)
 }

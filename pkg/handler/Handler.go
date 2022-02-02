@@ -8,6 +8,7 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/handler/dashboardHandler"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/dashboardService"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
 )
 
 var (
@@ -20,6 +21,7 @@ type Handler struct {
 	dashboard           *dashboardHandler.Dashboard
 	authService         *dashboardService.AuthService
 	notificationService *service.NotificationService
+	translatorService   *translator.TranslatorService
 }
 
 // NewHandler - constructor of Handler struct
@@ -27,15 +29,22 @@ func NewHandler(
 	manager *manager.Manager,
 	authService *dashboardService.AuthService,
 	notificationService *service.NotificationService,
+	translatorService *translator.TranslatorService,
 ) *Handler {
 	return &Handler{
-		manager:   manager,
-		dashboard: dashboardHandler.NewDashboard(manager, authService, notificationService),
+		manager: manager,
+		dashboard: dashboardHandler.NewDashboard(
+			manager,
+			authService,
+			notificationService,
+			translatorService,
+		),
 	}
 }
 
 // HandleDashboard - handle all pages of Dashboard
 func (handler *Handler) HandleDashboard() {
+	// pages
 	handler.dashboard.HandleTheIndexPage()
 	handler.dashboard.HandleTheNotificationsPage()
 	handler.dashboard.HandleTheTranslationPage()
@@ -43,6 +52,8 @@ func (handler *Handler) HandleDashboard() {
 	handler.dashboard.HandleTheAboutPage()
 	handler.dashboard.HandleTheLoginPage()
 	handler.dashboard.HandleTheLogoutPage()
+	// api
+	handler.dashboard.HandleTheTranslationAPI()
 }
 
 // HandleStaticFiles - will serve static files in the passed dir.

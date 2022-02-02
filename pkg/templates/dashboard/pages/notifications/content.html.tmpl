@@ -1,9 +1,11 @@
 {{template "base" .}}
 
 {{define "content"}}
+    <h2 align="center" class="jumbotron-base-title">
+        <a href="javascript:void(0)" class="content-header" style="pointer-events: none;" disabled>Notifications</a>
+    </h2><hr>
+    
     {{if not .Content.ErrorMessage}}
-        <h2 align="center" class="jumbotron-base-title">Notifications</h2><hr>
-
         {{if .Content.Notifications}}
             <table class="table">
                 <thead class="thead-dark">
