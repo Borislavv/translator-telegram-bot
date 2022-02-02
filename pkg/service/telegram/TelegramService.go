@@ -12,6 +12,7 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/dashboardService"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
@@ -22,14 +23,16 @@ type TelegramService struct {
 	gateway *TelegramGateway
 
 	// Services
-	userService *service.UserService
-	chatService *service.ChatService
-	translator  *translator.TranslatorService
+	userService    *service.UserService
+	chatService    *service.ChatService
+	translator     *translator.TranslatorService
+	tokenGenerator *dashboardService.TokenGenerator
 
 	// Channels
 	messagesChannel      chan *model.UpdatedMessage
 	notificationsChannel chan *modelDB.NotificationQueue
-	storechannel         chan *model.UpdatedMessage
+	storeChannel         chan *model.UpdatedMessage
+	tokensChannel        chan *model.TokenMessage
 	errorsChannel        chan string
 
 	// Cached values
@@ -43,9 +46,11 @@ func NewTelegramService(
 	userService *service.UserService,
 	chatService *service.ChatService,
 	translator *translator.TranslatorService,
+	tokenGenerator *dashboardService.TokenGenerator,
 	messagesChannel chan *model.UpdatedMessage,
 	notificationsChannel chan *modelDB.NotificationQueue,
 	storeChannel chan *model.UpdatedMessage,
+	tokensChannel chan *model.TokenMessage,
 	errorsChannel chan string,
 ) *TelegramService {
 	return &TelegramService{
@@ -54,9 +59,11 @@ func NewTelegramService(
 		userService:          userService,
 		chatService:          chatService,
 		translator:           translator,
+		tokenGenerator:       tokenGenerator,
 		messagesChannel:      messagesChannel,
 		notificationsChannel: notificationsChannel,
-		storechannel:         storeChannel,
+		storeChannel:         storeChannel,
+		tokensChannel:        tokensChannel,
 		errorsChannel:        errorsChannel,
 	}
 }
@@ -140,7 +147,7 @@ func (telegramService *TelegramService) GetMessages() {
 			telegramService.messagesChannel <- &message
 
 			// Run `StoreMessages` gorutine
-			telegramService.storechannel <- &message
+			telegramService.storeChannel <- &message
 
 			// Log info of message received
 			log.Printf("Message received: %+v\n", message)
@@ -157,11 +164,27 @@ func (telegramService *TelegramService) SendMessages() {
 	for {
 		select {
 		case message := <-telegramService.messagesChannel:
-			matchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(message.Data.Text)
+			notificationMatchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(message.Data.Text)
+			tokenRequestedMatchedValue := regexp.MustCompile(`^\/token$`).FindStringSubmatch(message.Data.Text)
 
 			var err error
 			var text string
-			if len(matchedValue) <= 0 {
+
+			if len(notificationMatchedValue) > 0 {
+				// processing notification
+				text = "Notification setted on " + notificationMatchedValue[0]
+			} else if len(tokenRequestedMatchedValue) > 0 {
+				token, err := telegramService.tokenGenerator.Generate()
+				if err != nil {
+					telegramService.errorsChannel <- util.Trace(err)
+					continue
+				}
+
+				// processing token request
+				text = "Token: " + token
+
+				telegramService.tokensChannel <- model.NewTokenMessage(message, token)
+			} else {
 				// processing translation
 				text, err = telegramService.translator.TranslateText(message.Data.Text)
 				if err != nil {
@@ -170,9 +193,6 @@ func (telegramService *TelegramService) SendMessages() {
 				}
 
 				text = "Tranlsation: " + text
-			} else {
-				// processing notification
-				text = "Notification setted on " + matchedValue[0]
 			}
 
 			if err := telegramService.gateway.SendMessage(
@@ -194,7 +214,7 @@ func (telegramService *TelegramService) SendMessages() {
 func (telegramService *TelegramService) StoreMessages() {
 	for {
 		select {
-		case message := <-telegramService.storechannel:
+		case message := <-telegramService.storeChannel:
 			chat, err := telegramService.chatService.GetChat(message.Data.Chat.ID)
 			if err != nil {
 				telegramService.errorsChannel <- util.Trace(err)
@@ -218,10 +238,10 @@ func (telegramService *TelegramService) StoreMessages() {
 			}
 
 			// check if the message is notification
-			matchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(messageQueue.Message)
-			if len(matchedValue) > 0 {
+			notificationMatchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(messageQueue.Message)
+			if len(notificationMatchedValue) > 0 {
 				// processing notification
-				scheduledFor, err := time.Parse("2006-01-02 15:04:05", matchedValue[0])
+				scheduledFor, err := time.Parse("2006-01-02 15:04:05", notificationMatchedValue[0])
 				if err != nil {
 					telegramService.errorsChannel <- util.Trace(err)
 					continue
@@ -241,6 +261,34 @@ func (telegramService *TelegramService) StoreMessages() {
 			}
 
 			log.Printf("Message was stored: %+v\n", message)
+		}
+	}
+}
+
+// StoreTokens - saving requested tokens into database to users
+func (telegramService *TelegramService) StoreTokens() {
+	for {
+		select {
+		case data := <-telegramService.tokensChannel:
+			chat, err := telegramService.chatService.GetChat(data.UpdatedMessage.Data.Chat.ID)
+			if err != nil {
+				telegramService.errorsChannel <- util.Trace(err)
+				continue
+			}
+
+			user, err := telegramService.userService.GetUser(data.UpdatedMessage.Data.Chat.Username, chat.ID)
+			if err != nil {
+				telegramService.errorsChannel <- util.Trace(err)
+				continue
+			}
+
+			user, err = telegramService.userService.SetToken(user, data.Token)
+			if err != nil {
+				telegramService.errorsChannel <- util.Trace(err)
+				continue
+			}
+
+			log.Printf("Token was stored: %+v\n", user)
 		}
 	}
 }

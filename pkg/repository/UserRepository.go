@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 )
@@ -34,18 +35,69 @@ func (repository *UserRepository) FindByUsername(username string) (*modelDB.User
 	user := modelDB.NewUser()
 
 	if err := repository.connection.db.QueryRow(
-		"SELECT id, chat_id, username, created_at FROM user WHERE username = ?",
+		"SELECT id, chat_id, username, token, created_at FROM user WHERE username = ?",
 		username,
 	).Scan(
 		&user.ID,
 		&user.ChatId,
 		&user.Username,
+		&user.Token,
 		&user.CreatedAt,
 	); err != nil {
 		if err != sql.ErrNoRows {
 			return nil, err
+		} else {
+			return nil, nil
 		}
 	}
+
+	return user, nil
+}
+
+// FindByUsername - trying to find `user` into db by `token`
+func (repository *UserRepository) FindByToken(token string) (*modelDB.User, error) {
+	user := modelDB.NewUser()
+
+	if err := repository.connection.db.QueryRow(
+		"SELECT id, chat_id, username, token, created_at FROM user WHERE token = ?",
+		token,
+	).Scan(
+		&user.ID,
+		&user.ChatId,
+		&user.Username,
+		&user.Token,
+		&user.CreatedAt,
+	); err != nil {
+		if err != sql.ErrNoRows {
+			return nil, err
+		} else {
+			return nil, nil
+		}
+	}
+
+	return user, nil
+}
+
+// SetToken - saving user token
+func (repository *UserRepository) SetToken(user *modelDB.User, token string) (*modelDB.User, error) {
+	result, err := repository.connection.db.Exec(
+		"UPDATE user SET token = ? WHERE id = ?",
+		token,
+		user.ID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	affectedRows, err := result.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if affectedRows <= 0 {
+		return nil, errors.New("no one user was updated while saving token")
+	}
+
+	user.Token = token
 
 	return user, nil
 }

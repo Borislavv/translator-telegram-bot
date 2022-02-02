@@ -1,0 +1,26 @@
+.jumbotron-base-title {
+    opacity: 0.7;
+}
+
+.jumbotron {
+    padding-top: 64px;
+    padding-bottom: 10px;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.content {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.in-jambatron-button {
+    margin-left: 34px;
+    margin-right: 34px;
+}
+
+.content-header {
+    text-shadow: 1px 1px 2px black, 0 0 1em grey, 0 0 0.2em black;
+}

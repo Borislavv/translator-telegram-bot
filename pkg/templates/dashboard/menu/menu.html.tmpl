@@ -1,0 +1,49 @@
+{{template "base" .}}
+
+{{define "menu"}}
+    <style>
+        a:link {
+            color: white;
+        }
+
+        a:visited {
+            color: white;
+        }
+
+        a:hover {
+            color: grey;
+        }
+
+        a:active {
+            color: #708090;
+        }
+
+        a.disabled {
+            pointer-events: none;
+        }
+
+        .auth {
+            opacity: 0.7;
+        }
+    </style>
+
+    <ul class="navbar-nav mr-auto" style="width:100%;">
+        {{if .Menu}}
+            {{range .Menu.Items}}
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{.Link}}">{{.Title}}</a>
+                </li>
+            {{end}}
+        {{end}}
+    </ul>
+
+    {{if .User}}
+        <span class="badge badge-danger pull-right auth">
+            <a class="nav-link" href="/logout">Logout from {{.User.Username}} account</a>
+        </span>
+    {{else}}
+        <span class="badge badge-success pull-right auth">
+            <a class="nav-link" href="/login">Login</a>
+        </span>
+    {{end}}
+{{end}}

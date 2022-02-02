@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/handler"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/dashboardService"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
 )
@@ -29,6 +30,7 @@ func main() {
 	messagesChannel := make(chan *model.UpdatedMessage, 128)
 	notificationsChannel := make(chan *modelDB.NotificationQueue, 128)
 	storeChannel := make(chan *model.UpdatedMessage, 128)
+	tokensChannel := make(chan *model.TokenMessage, 128)
 	errorsChannel := make(chan string, 512)
 
 	// Creating an instance of Config at first and load it
@@ -46,11 +48,20 @@ func main() {
 	// Creating an instance of ChatService
 	chatService := service.NewChatService(manager)
 
+	// Creating an instance of NotificationService
+	notificationService := service.NewNotificationService(manager)
+
 	// Creating an instance of TranslatorGateway
 	translatorGateway := translator.NewTranslatorGateway(manager)
 
 	// Creating an instance of TranslatorService
 	translator := translator.NewTranslatorService(translatorGateway)
+
+	// Creating an instance of AuthService
+	auth := dashboardService.NewAuthService(manager, userService)
+
+	// Creating an instance of TokenGenerator
+	tokenGenerator := dashboardService.NewTokenGenerator()
 
 	// Creating an instace of TelegramService
 	telegramService := telegram.NewTelegramService(
@@ -59,9 +70,11 @@ func main() {
 		userService,
 		chatService,
 		translator,
+		tokenGenerator,
 		messagesChannel,
 		notificationsChannel,
 		storeChannel,
+		tokensChannel,
 		errorsChannel,
 	)
 
@@ -73,13 +86,17 @@ func main() {
 
 	fmt.Println("Handling messages ...")
 
+	// HTTP server which handle Dashboard
+	go func() {
+		server := handler.NewHandler(manager, auth, notificationService, translator)
+		server.HandleDashboard()
+		server.HandleStaticFiles()
+		server.ListenAndServe()
+	}()
+
 	bot.ProcessMessages()
 	bot.ProcessNotifications()
 	bot.ProcessErrors()
-
-	for {
-		time.Sleep(15 * time.Millisecond)
-	}
 }
 
 // askFlags - getting args. from cli

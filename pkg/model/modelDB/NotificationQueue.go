@@ -26,3 +26,7 @@ func NewNotificationQueueConstructor(messageQueueId int64, chatId int64, schedul
 		ScheduledFor:   scheduledFor,
 	}
 }
+
+func (not *NotificationQueue) Inc(i int) int {
+	return i + 1
+}
