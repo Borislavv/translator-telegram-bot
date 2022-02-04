@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-	"runtime"
 	"sync"
 	"time"
 
@@ -163,8 +162,6 @@ func (telegramService *TelegramService) GetMessages() {
 		if receivedOffset != 0 {
 			telegramService.lastReceivedOffset = receivedOffset + 1
 		}
-
-		runtime.Gosched()
 
 		time.Sleep(30 * time.Millisecond)
 	}

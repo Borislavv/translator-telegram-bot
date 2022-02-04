@@ -53,7 +53,9 @@ func (handler *Handler) HandleDashboard() {
 	handler.dashboard.HandleTheLoginPage()
 	handler.dashboard.HandleTheLogoutPage()
 	// api
-	handler.dashboard.HandleTheTranslationAPI()
+	handler.dashboard.HandleTheTranslateAPIMethod()
+	handler.dashboard.HandleTheEnableNotificationAPIMethod()
+	handler.dashboard.HandleTheDisableNotificationAPIMethod()
 }
 
 // HandleStaticFiles - will serve static files in the passed dir.

@@ -1,6 +1,9 @@
 package helper
 
-import "regexp"
+import (
+	"regexp"
+	"strconv"
+)
 
 type TemplateFuncsHelper struct {
 }
@@ -23,4 +26,14 @@ func (funcs *TemplateFuncsHelper) PregReplace(pattern string, subject string, re
 	}
 
 	return reg.ReplaceAllString(subject, replacement)
+}
+
+// IntToString - convert int to string
+func (funcs *TemplateFuncsHelper) IntToString(intVal int) string {
+	return strconv.Itoa(intVal)
+}
+
+// Int64ToString - convert int to string
+func (funcs *TemplateFuncsHelper) Int64ToString(intVal int64) string {
+	return strconv.Itoa(int(intVal))
 }

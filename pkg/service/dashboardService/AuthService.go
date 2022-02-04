@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelInterface"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
@@ -65,8 +66,22 @@ func (auth *AuthService) Login(authData modelInterface.UserAuthInterface) (*mode
 	return auth.GetUserFromCache(authData)
 }
 
+// IsGrantedAccessByCookies - check the access be cookies
+func (auth *AuthService) IsGrantedAccessByCookies(w http.ResponseWriter, r *http.Request) error {
+	authData, err := model.NewAuthCookieData(w, r)
+	if err != nil {
+		return err
+	}
+
+	if !auth.IsAuthorized(w, authData) {
+		return errors.New("You are not logged in, please visit the login page.")
+	}
+
+	return nil
+}
+
 // IsAuthorized - check the user is authorized and isset in cache if not do logout action
-func (auth *AuthService) IsAuthorized(authData modelInterface.UserAuthInterface) bool {
+func (auth *AuthService) IsAuthorized(w http.ResponseWriter, authData modelInterface.UserAuthInterface) bool {
 	if !auth.isAuthorized(authData) {
 		auth.Logout(authData)
 
@@ -96,7 +111,9 @@ func (auth *AuthService) isAuthorized(authData modelInterface.UserAuthInterface)
 // GetUserFromCache - loading user from or into cache by authData
 func (auth *AuthService) GetUserFromCache(authData modelInterface.UserAuthInterface) (*modelDB.User, error) {
 	if _, issetInCache := auth.userService.Cache[authData.GetUsername()]; issetInCache {
-		return auth.userService.Cache[authData.GetUsername()], nil
+		if auth.userService.Cache[authData.GetUsername()].Token != "" {
+			return auth.userService.Cache[authData.GetUsername()], nil
+		}
 	} else {
 		dbUser, err := auth.manager.Repository.User().FindByUsername(authData.GetUsername())
 		if err != nil {
