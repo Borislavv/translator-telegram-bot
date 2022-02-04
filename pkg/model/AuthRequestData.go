@@ -47,3 +47,8 @@ func (authData *AuthRequestData) GetToken() string {
 func (authData *AuthRequestData) GetWriter() http.ResponseWriter {
 	return authData.writer
 }
+
+// SetWriter - setter of writer (http.ResponseWriter)
+func (authData *AuthRequestData) SetWriter(w http.ResponseWriter) {
+	authData.writer = w
+}

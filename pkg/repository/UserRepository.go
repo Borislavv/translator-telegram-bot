@@ -34,6 +34,8 @@ func (repository *UserRepository) Create(user *modelDB.User) (*modelDB.User, err
 func (repository *UserRepository) FindByUsername(username string) (*modelDB.User, error) {
 	user := modelDB.NewUser()
 
+	tokenField := sql.NullString{}
+
 	if err := repository.connection.db.QueryRow(
 		"SELECT id, chat_id, username, token, created_at FROM user WHERE username = ?",
 		username,
@@ -41,7 +43,7 @@ func (repository *UserRepository) FindByUsername(username string) (*modelDB.User
 		&user.ID,
 		&user.ChatId,
 		&user.Username,
-		&user.Token,
+		&tokenField,
 		&user.CreatedAt,
 	); err != nil {
 		if err != sql.ErrNoRows {
@@ -51,12 +53,21 @@ func (repository *UserRepository) FindByUsername(username string) (*modelDB.User
 		}
 	}
 
+	// process nullable columns
+	if tokenField.Valid {
+		user.Token = tokenField.String
+	} else {
+		user.Token = ""
+	}
+
 	return user, nil
 }
 
 // FindByUsername - trying to find `user` into db by `token`
 func (repository *UserRepository) FindByToken(token string) (*modelDB.User, error) {
 	user := modelDB.NewUser()
+
+	tokenField := sql.NullString{}
 
 	if err := repository.connection.db.QueryRow(
 		"SELECT id, chat_id, username, token, created_at FROM user WHERE token = ?",
@@ -65,7 +76,7 @@ func (repository *UserRepository) FindByToken(token string) (*modelDB.User, erro
 		&user.ID,
 		&user.ChatId,
 		&user.Username,
-		&user.Token,
+		&tokenField,
 		&user.CreatedAt,
 	); err != nil {
 		if err != sql.ErrNoRows {
@@ -73,6 +84,13 @@ func (repository *UserRepository) FindByToken(token string) (*modelDB.User, erro
 		} else {
 			return nil, nil
 		}
+	}
+
+	// process nullable columns
+	if tokenField.Valid {
+		user.Token = tokenField.String
+	} else {
+		user.Token = ""
 	}
 
 	return user, nil

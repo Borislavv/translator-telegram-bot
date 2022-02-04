@@ -142,20 +142,28 @@ func (telegramService *TelegramService) GetMessages() {
 			continue
 		}
 
+		var receivedOffset int64
 		for _, message := range messages.Messages {
+
+			msg := message
+
 			// Run `SendMessages` gorutine
-			telegramService.messagesChannel <- &message
+			telegramService.messagesChannel <- &msg
 
 			// Run `StoreMessages` gorutine
-			telegramService.storeChannel <- &message
+			telegramService.storeChannel <- &msg
 
 			// Log info of message received
-			log.Printf("Message received: %+v\n", message)
+			log.Printf("Message received: %+v\n", msg)
+
+			receivedOffset = message.QueueId
 		}
 
-		telegramService.lastReceivedOffset = telegramService.lastReceivedOffset + int64(len(messages.Messages))
+		if receivedOffset != 0 {
+			telegramService.lastReceivedOffset = receivedOffset + 1
+		}
 
-		time.Sleep(15 * time.Millisecond)
+		time.Sleep(30 * time.Millisecond)
 	}
 }
 

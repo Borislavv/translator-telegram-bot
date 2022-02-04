@@ -9,6 +9,7 @@ type NotificationQueue struct {
 	ChatId         int64
 	ExternalChatId int64 // transfer prop., does not exists as column
 	IsSent         bool
+	IsActive       bool
 	CreatedAt      time.Time
 	ScheduledFor   time.Time
 }

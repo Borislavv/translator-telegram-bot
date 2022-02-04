@@ -32,6 +32,8 @@ func NewDashboard(
 	}
 }
 
+/** Pages */
+
 // HandleTheIndexPage - handle the `index` page as controller method
 func (dashboard *Dashboard) HandleTheIndexPage() {
 	http.HandleFunc("/", dashboard.IndexPage)
@@ -67,7 +69,19 @@ func (dashboard *Dashboard) HandleTheLogoutPage() {
 	http.HandleFunc("/logout", dashboard.LogoutPage)
 }
 
+/** API */
+
 // HandleTheLogoutPage - handle the `/api/v1/translate` route as controller method
-func (dashboard *Dashboard) HandleTheTranslationAPI() {
-	http.HandleFunc("/api/v1/translate", dashboard.TranslationAPI)
+func (dashboard *Dashboard) HandleTheTranslateAPIMethod() {
+	http.HandleFunc("/api/v1/translate", dashboard.TranslateAPIMethod)
+}
+
+// HandleTheLogoutPage - handle the `/api/v1/notifications/disable/` route as controller method
+func (dashboard *Dashboard) HandleTheEnableNotificationAPIMethod() {
+	http.HandleFunc("/api/v1/notifications/enable/", dashboard.EnableNotificationAPIMethod)
+}
+
+// HandleTheLogoutPage - handle the `/api/v1/notifications/disable/` route as controller method
+func (dashboard *Dashboard) HandleTheDisableNotificationAPIMethod() {
+	http.HandleFunc("/api/v1/notifications/disable/", dashboard.DisableNotificationAPIMethod)
 }

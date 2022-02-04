@@ -29,7 +29,11 @@
                             contentType: 'application/json',
                             data: JSON.stringify(data),
                         }).done(function(response) {
-                            $("#setTranslationContainer").val(response.text);
+                            if (response.code === 200) {
+                                $("#setTranslationContainer").val(response.data.content.text);
+                            } else {
+                                $("#setTranslationContainer").val("Sorry, but obviously translation limit is out.");
+                            }
                         });
                     }
                 });

@@ -7,6 +7,7 @@ import (
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/helper"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelAPI/dataAPI"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDashboard"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
@@ -34,7 +35,7 @@ func (dashboard *Dashboard) TranslationPage(w http.ResponseWriter, r *http.Reque
 
 	// checking the user have access to this section
 	authData, err := model.NewAuthCookieData(w, r)
-	if err != nil || !dashboard.authService.IsAuthorized(authData) {
+	if err != nil || !dashboard.authService.IsAuthorized(w, authData) {
 		content.ErrorMessage = "Please, visit this page for auth"
 	} else {
 		cachedUser, err := dashboard.authService.GetUserFromCache(authData)
@@ -57,7 +58,7 @@ func (dashboard *Dashboard) TranslationPage(w http.ResponseWriter, r *http.Reque
 }
 
 // TranslationAPI - method for translate simple text by API
-func (dashboard *Dashboard) TranslationAPI(w http.ResponseWriter, r *http.Request) {
+func (dashboard *Dashboard) TranslateAPIMethod(w http.ResponseWriter, r *http.Request) {
 	type RequestData struct {
 		Text string `json:"text"`
 	}
@@ -89,9 +90,11 @@ func (dashboard *Dashboard) TranslationAPI(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	responseData := ResponseData{
-		Text: translatedText,
-	}
-
-	util.WriteResponse(w, responseData)
+	util.WriteResponse(
+		w,
+		dataAPI.NewContentData(ResponseData{
+			Text: translatedText,
+		}),
+		http.StatusOK,
+	)
 }

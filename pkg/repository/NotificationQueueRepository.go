@@ -11,6 +11,28 @@ type NotificationQueueRepository struct {
 	connection *Repository
 }
 
+// FindById - trying to find the target notification by id
+func (repository *NotificationQueueRepository) FindById(id int64) (*modelDB.NotificationQueue, error) {
+	notification := modelDB.NewNotificationQueue()
+
+	if err := repository.connection.db.QueryRow(
+		"SELECT id, message_queue_id, chat_id, is_sent, is_active, created_at, scheduled_for FROM notification_queue WHERE id = ?",
+		id,
+	).Scan(
+		&notification.ID,
+		&notification.MessageQueueId,
+		&notification.ChatId,
+		&notification.IsSent,
+		&notification.IsActive,
+		&notification.CreatedAt,
+		&notification.ScheduledFor,
+	); err != nil {
+		return nil, err
+	}
+
+	return notification, nil
+}
+
 // Create - adding a new `notification_queue` row into db
 func (repository *NotificationQueueRepository) Create(ntfQueue *modelDB.NotificationQueue) (*modelDB.NotificationQueue, error) {
 	result, err := repository.connection.db.Exec(
@@ -80,7 +102,7 @@ func (repository *NotificationQueueRepository) FindNotSentByUsername(
 ) ([]*modelDB.NotificationQueue, error) {
 	var responseStack []*modelDB.NotificationQueue
 
-	queryStr := "SELECT msg.message, nq.scheduled_for FROM notification_queue `nq`" +
+	queryStr := "SELECT nq.id, msg.message, nq.scheduled_for, nq.created_at, nq.is_active FROM notification_queue `nq`" +
 		" LEFT JOIN chat `c` ON nq.chat_id = c.id" +
 		" LEFT JOIN user `u` ON c.id = u.chat_id" +
 		" LEFT JOIN message_queue `msg` ON nq.message_queue_id = msg.id" +
@@ -113,8 +135,11 @@ func (repository *NotificationQueueRepository) FindNotSentByUsername(
 		notification := modelDB.NewNotificationQueue()
 
 		if err = rows.Scan(
+			&notification.ID,
 			&notification.Message,
 			&notification.ScheduledFor,
+			&notification.CreatedAt,
+			&notification.IsActive,
 		); err != nil {
 			return nil, err
 		}
@@ -141,6 +166,36 @@ func (repository *NotificationQueueRepository) MakeAsSent(notification *modelDB.
 	}
 
 	notification.IsSent = true
+
+	return notification, nil
+}
+
+// MakeAsDisabled - set a value of `is_active` column to 0(false)
+func (repository *NotificationQueueRepository) MakeAsDisabled(notification *modelDB.NotificationQueue) (*modelDB.NotificationQueue, error) {
+	_, err := repository.connection.db.Exec(
+		"UPDATE notification_queue SET is_active = 0 WHERE id = ?",
+		notification.ID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	notification.IsActive = false
+
+	return notification, nil
+}
+
+// MakeAsEnabled - set a value of `is_active` column to 1(true)
+func (repository *NotificationQueueRepository) MakeAsEnabled(notification *modelDB.NotificationQueue) (*modelDB.NotificationQueue, error) {
+	_, err := repository.connection.db.Exec(
+		"UPDATE notification_queue SET is_active = 1 WHERE id = ?",
+		notification.ID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	notification.IsActive = true
 
 	return notification, nil
 }

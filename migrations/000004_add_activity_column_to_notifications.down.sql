@@ -1,0 +1,1 @@
+ALTER TABLE notification_queue DROP COLUMN is_active;

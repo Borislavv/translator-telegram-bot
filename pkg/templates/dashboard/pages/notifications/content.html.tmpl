@@ -13,6 +13,8 @@
                     <th scope="col">#</th>
                     <th scope="col">Message</th>
                     <th scope="col">Scheduled for</th>
+                    <th scope="col">Is active?</th>
+                    <th scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -21,6 +23,26 @@
                             <th scope="row">{{$.Funcs.Inc $key}}</th>
                             <td>{{$.Funcs.PregReplace `\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}` $notification.Message ""}}</td>
                             <td>{{$notification.ScheduledFor.Format "Jan 02, 2006 15:04:05 UTC"}}</td>
+                            <td>{{$notification.IsActive}}</td>
+                            <td class="activity">
+                                {{if $notification.IsActive}}
+                                    <button 
+                                        style="opacity: 0.7;" 
+                                        class="btn btn-danger activity-trigger-anchor" 
+                                        data-action="disable"
+                                        data-target-url="{{$.Funcs.PregReplace `\{id\}` $.Content.DisableNotificationUrlPattern ($.Funcs.Int64ToString $notification.ID) }}">
+                                        Деактивировать
+                                    </button>
+                                {{else}}
+                                    <button 
+                                        style="opacity: 0.7;" 
+                                        class="btn btn-success activity-trigger-anchor"
+                                        data-action="enable"
+                                        data-target-url="{{$.Funcs.PregReplace `\{id\}` $.Content.EnableNotificationUrlPattern ($.Funcs.Int64ToString $notification.ID) }}">
+                                        Активировать
+                                    </button>
+                                {{end}}
+                            </td>
                         </tr>
                     {{end}}
                 </tbody>
@@ -32,4 +54,40 @@
             <hr><a href="{{.Content.LoginByTokenLink}}">Login >></a>
         </div>
     {{end}}
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            $(".activity-trigger-anchor").click(function(e) {
+                self = this
+
+                $.ajax({
+                    url: $(this).attr("data-target-url"),
+                    type: "GET",
+                }).done(function(response) {
+                    if (response.code == 200) {
+                        let action  = $(self).attr("data-action");
+                        let url     = $(self).attr("data-target-url");
+
+                        if (response.data.status == "success") {
+                            if (action == "disable") {
+                                $(self).text("Активировать");
+                                $(self).attr("data-action", "enable");
+                                $(self).attr("data-target-url", url.replace("\/disable\/", "/enable/"));
+                                $(self).removeClass("btn btn-danger");
+                                $(self).addClass("btn btn-success");
+                            } else {
+                                $(self).text("Деактивировать");
+                                $(self).attr("data-action", "disable");
+                                $(self).attr("data-target-url", url.replace("\/enable\/", "/disable/"));
+                                $(self).removeClass("btn btn-success");
+                                $(self).addClass("btn btn-danger");
+                            }
+                        }
+                    } else {
+                        alert("Problem occurred while notification updating.");
+                    }
+                });
+            });
+        });
+    </script>
 {{end}}
