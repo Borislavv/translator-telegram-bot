@@ -23,8 +23,8 @@
                             <th scope="row">{{$.Funcs.Inc $key}}</th>
                             <td>{{$.Funcs.PregReplace `\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}` $notification.Message ""}}</td>
                             <td>{{$notification.ScheduledFor.Format "Jan 02, 2006 15:04:05 UTC"}}</td>
-                            <td>{{$notification.IsActive}}</td>
-                            <td class="activity">
+                            <td class="is-active" id="is-active">{{$notification.IsActive}}</td>
+                            <td>
                                 {{if $notification.IsActive}}
                                     <button 
                                         style="opacity: 0.7;" 
@@ -75,12 +75,16 @@
                                 $(self).attr("data-target-url", url.replace("\/disable\/", "/enable/"));
                                 $(self).removeClass("btn btn-danger");
                                 $(self).addClass("btn btn-success");
+
+                                $("#is-active").closest("#is-active", $(self).closest("tr")).text("false");
                             } else {
                                 $(self).text("Деактивировать");
                                 $(self).attr("data-action", "disable");
                                 $(self).attr("data-target-url", url.replace("\/enable\/", "/disable/"));
                                 $(self).removeClass("btn btn-success");
                                 $(self).addClass("btn btn-danger");
+
+                                $("#is-active").closest("#is-active", $(self).closest("tr")).text("true");
                             }
                         }
                     } else {
