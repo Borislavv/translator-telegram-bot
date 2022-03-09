@@ -1,35 +1,50 @@
 version: '3.8'
+
 services:
+  # further, u need using `db` string as host for database while connection
   db:
     image: mysql:latest
     container_name: telegram_bot_db_container
+    # if this instruction is omitted, then database will purged every time when container restart
     volumes:
       - db_data:/var/lib/mysql
     environment:
       MYSQL_DATABASE: ${DB_NAME}
+      # one of security instructions must be defined (possible: MYSQL_ALLOW_EMPTY_PASSWORD)
       MYSQL_ROOT_PASSWORD: ${DB_PASS}
+    # restrt if error occurred
     restart: always
+    # binding internal ports to external
     ports:
       - 3307:3306
+    # opens port 3306 on the container
     expose:
-      # Opens port 3306 on the container
       - '3306'
+  # further, u need using `app` string as host for app into code, from http-client, use machine ip or localhost (domain)
   app:
+    # building image from Dockerfile into current dir.
     build: ./
     container_name: telegram_bot_app_container
+    # this vars. used for Makefile and nowhere more
     environment:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
+    # binding internal ports to external
     ports:
       - 8000:8000
+    # opens port 8000 on the container
     expose:
-      # Opens port 8000 on the container
       - '8000'
+    # restrt if error occurred
     restart: always
+    # linking database container
     links:
       - db
+    # waiting while db-container is not ready
     depends_on:
       - db
+
+# defined volumes as map
 volumes:
   db_data:
