@@ -20,6 +20,8 @@
 &nbsp;&nbsp;&nbsp;&nbsp;[<b>Build and Up</b>]: docker-compose up --build<br />
 &nbsp;&nbsp;&nbsp;&nbsp;[<b>Just Up</b>]: docker-compose up
 
+5. Now, you can use the bot and his lounch dashboard on http://localhost:8000/.
+
 # Installation and running (Legacy)
 
 1. Choose the target configuration file and fill it. Config files path: `root_app_dir/config`.
