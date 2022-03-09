@@ -17,11 +17,14 @@ RUN go mod download
 # Copy the code into the container
 COPY . .
 
+# Install necessery depsendencies
 RUN go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@latest && go get github.com/go-sql-driver/mysql
 
 # Export necessary port
 EXPOSE 8000
 
+# Execute migrations
 RUN migrate -database "mysql://root:colahonda@tcp(db:3306)/translatortelegrambot" -path migrations up; exit 0;
 
+# Run the app
 CMD [ "go", "run", "cmd/app/main.go", "--config-path=config/.env.dev.toml", "--env-mode=dev" ]
