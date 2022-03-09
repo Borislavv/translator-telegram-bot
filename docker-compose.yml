@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  db:
+    image: mysql:latest
+    container_name: telegram_bot_db_container
+    volumes:
+      - db_data:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+    restart: always
+    ports:
+      - 3307:3306
+    expose:
+      # Opens port 3306 on the container
+      - '3306'
+  app:
+    build: ./
+    container_name: telegram_bot_app_container
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+    ports:
+      - 8000:8000
+    expose:
+      # Opens port 8000 on the container
+      - '8000'
+    restart: always
+    links:
+      - db
+    depends_on:
+      - db
+volumes:
+  db_data:
