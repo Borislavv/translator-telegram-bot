@@ -8,7 +8,19 @@
 **Email**: glazunov2142@gmail.com **|**
 **Phone**: +7(904)-939-89-83 (Telegram)
 
-# Installation and running
+# Installation and running (Actual)
+
+1. Choose the target configuration file and fill it. Config files path: `root_app_dir/config` and also you need fill the <b>.env</b>.
+
+2. Install the Docker (with compose, if you building it from source) if you have not.
+
+3. Change directory to the project root.
+
+4. Build images if you didn't it before and up containers:<br />
+&nbsp;&nbsp;&nbsp;&nbsp;[<b>Build and Up</b>]: docker-compose up --build<br />
+&nbsp;&nbsp;&nbsp;&nbsp;[<b>Just Up</b>]: docker-compose up
+
+# Installation and running (Legacy)
 
 1. Choose the target configuration file and fill it. Config files path: `root_app_dir/config`.
 
