@@ -261,7 +261,9 @@ func (telegramService *TelegramService) StoreMessages() {
 
 			// check if the message is notification
 			notificationMatchedValue := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`).FindStringSubmatch(messageQueue.Message)
-			if len(notificationMatchedValue) > 0 {
+			if len(notificationMatchedValue) > 0 &&
+				len(regexp.MustCompile(`\/\w+`).FindStringSubmatch(messageQueue.Message)) == 0 {
+
 				utcLocation, err := time.LoadLocation("UTC")
 				if err != nil {
 					telegramService.errorsChannel <- util.Trace(err)
