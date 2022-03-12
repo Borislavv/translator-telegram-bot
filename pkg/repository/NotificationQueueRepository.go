@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"database/sql"
+	"strconv"
 	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
@@ -51,15 +53,16 @@ func (repository *NotificationQueueRepository) Create(ntfQueue *modelDB.Notifica
 }
 
 // FindByScheduledDate - trying to find notification by `scheduled_for`
-func (repository *NotificationQueueRepository) FindByScheduledDate(dateTime time.Time) ([]*modelDB.NotificationQueue, error) {
+func (repository *NotificationQueueRepository) FindByScheduledDate() ([]*modelDB.NotificationQueue, error) {
 	var responseStack []*modelDB.NotificationQueue
 
 	rows, err := repository.connection.db.Query(
 		"SELECT nq.id, msg.message, c.external_chat_id FROM notification_queue `nq`"+
-			" LEFT JOIN chat `c` ON nq.chat_id = c.id "+
+			" LEFT JOIN chat `c` ON nq.chat_id = c.id"+
+			" LEFT JOIN user `u` ON u.chat_id = c.id"+
 			" LEFT JOIN message_queue `msg` ON nq.message_queue_id = msg.id"+
-			" WHERE nq.is_sent = 0 AND nq.scheduled_for <= ?",
-		dateTime.Add(1*time.Minute).Format("2006-01-02 15:04:05"),
+			" WHERE nq.is_sent = 0 AND nq.is_active = 1 AND nq.scheduled_for <= ?",
+		time.Now().Add(1*time.Minute).Format("2006-01-02 15:04:05"),
 	)
 
 	// Close rows anyway
@@ -101,24 +104,33 @@ func (repository *NotificationQueueRepository) FindNotSentByUsername(
 	pagination modelInterface.PaginationInterface,
 ) ([]*modelDB.NotificationQueue, error) {
 	var responseStack []*modelDB.NotificationQueue
+	var err error
 
 	queryStr := "SELECT nq.id, msg.message, nq.scheduled_for, nq.created_at, nq.is_active FROM notification_queue `nq`" +
 		" LEFT JOIN chat `c` ON nq.chat_id = c.id" +
 		" LEFT JOIN user `u` ON c.id = u.chat_id" +
 		" LEFT JOIN message_queue `msg` ON nq.message_queue_id = msg.id" +
-		" WHERE nq.is_sent = 0 AND u.username = ?" +
+		" WHERE nq.is_sent = 0 AND u.username = ? AND nq.scheduled_for > ?" +
 		" ORDER BY nq.scheduled_for ASC"
 
+	var rows *sql.Rows
 	if pagination.NeedPaginate() {
 		queryStr += " LIMIT ? OFFSET ?"
-	}
 
-	rows, err := repository.connection.db.Query(
-		queryStr,
-		username,
-		pagination.GetLimit(),
-		(pagination.GetPage()-1)*pagination.GetLimit(),
-	)
+		rows, err = repository.connection.db.Query(
+			queryStr,
+			username,
+			time.Now().Format("2006-01-02 15:04:05"),
+			strconv.Itoa(pagination.GetLimit()),
+			strconv.Itoa((pagination.GetPage()-1)*pagination.GetLimit()),
+		)
+	} else {
+		rows, err = repository.connection.db.Query(
+			queryStr,
+			username,
+			time.Now().Format("2006-01-02 15:04:05"),
+		)
+	}
 
 	// Close rows anyway
 	defer func() {

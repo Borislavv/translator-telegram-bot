@@ -55,7 +55,7 @@ func (userService *UserService) GetUser(username string, chatId int64) (*modelDB
 
 // SetToken - setting token to user
 func (userService *UserService) SetToken(user *modelDB.User, token string) (*modelDB.User, error) {
-	user, err := userService.manager.Repository.User().SetToken(user, token)
+	user, err := userService.manager.Repository.User().SetTokenById(user, token)
 	if err != nil {
 		log.Println(util.Trace(err))
 		return nil, err

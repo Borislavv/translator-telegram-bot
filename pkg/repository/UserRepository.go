@@ -37,7 +37,7 @@ func (repository *UserRepository) FindByUsername(username string) (*modelDB.User
 	tokenField := sql.NullString{}
 
 	if err := repository.connection.db.QueryRow(
-		"SELECT id, chat_id, username, token, created_at FROM user WHERE username = ?",
+		"SELECT id, chat_id, username, token, created_at, tz FROM user WHERE username = ?",
 		username,
 	).Scan(
 		&user.ID,
@@ -45,6 +45,7 @@ func (repository *UserRepository) FindByUsername(username string) (*modelDB.User
 		&user.Username,
 		&tokenField,
 		&user.CreatedAt,
+		&user.TZ,
 	); err != nil {
 		if err != sql.ErrNoRows {
 			return nil, err
@@ -97,7 +98,7 @@ func (repository *UserRepository) FindByToken(token string) (*modelDB.User, erro
 }
 
 // SetToken - saving user token
-func (repository *UserRepository) SetToken(user *modelDB.User, token string) (*modelDB.User, error) {
+func (repository *UserRepository) SetTokenById(user *modelDB.User, token string) (*modelDB.User, error) {
 	result, err := repository.connection.db.Exec(
 		"UPDATE user SET token = ? WHERE id = ?",
 		token,
@@ -116,6 +117,20 @@ func (repository *UserRepository) SetToken(user *modelDB.User, token string) (*m
 	}
 
 	user.Token = token
+
+	return user, nil
+}
+
+// SetTimeZone - saving user timezone into database.
+func (repository *UserRepository) SetTimeZoneByExtChatId(user *modelDB.User) (*modelDB.User, error) {
+	_, err := repository.connection.db.Exec(
+		"UPDATE user u LEFT JOIN chat c ON c.id = u.chat_id SET u.tz = ? WHERE c.external_chat_id = ?",
+		user.TZ,
+		user.ChatId,
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	return user, nil
 }

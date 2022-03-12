@@ -55,6 +55,9 @@ func (bot *TelegramBot) ProcessMessages() {
 
 	// Saving tokens in a new thread
 	go bot.telegramService.StoreTokens()
+
+	// Client side commands processing in a new thread
+	go bot.telegramService.ProcessCommands()
 }
 
 // ProcessErrors - (gorutine) simple output of errors with debug info

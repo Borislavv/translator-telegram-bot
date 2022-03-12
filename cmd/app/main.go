@@ -12,6 +12,7 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/dashboardService"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram/command"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
 )
 
@@ -31,7 +32,8 @@ func main() {
 	notificationsChannel := make(chan *modelDB.NotificationQueue, 128)
 	storeChannel := make(chan *model.UpdatedMessage, 128)
 	tokensChannel := make(chan *model.TokenMessage, 128)
-	errorsChannel := make(chan string, 512)
+	commandsChannel := make(chan *model.CommandMessage, 128)
+	errorsChannel := make(chan string, 756)
 
 	// Creating an instance of Config at first and load it
 	config := config.New().Load(configurationPath, environmentMode)
@@ -63,6 +65,9 @@ func main() {
 	// Creating an instance of TokenGenerator
 	tokenGenerator := dashboardService.NewTokenGenerator()
 
+	// Creating an instance of CommandService
+	commandsService := command.NewCommandService(manager)
+
 	// Creating an instace of TelegramService
 	telegramService := telegram.NewTelegramService(
 		manager,
@@ -71,10 +76,12 @@ func main() {
 		chatService,
 		translator,
 		tokenGenerator,
+		commandsService,
 		messagesChannel,
 		notificationsChannel,
 		storeChannel,
 		tokensChannel,
+		commandsChannel,
 		errorsChannel,
 	)
 
