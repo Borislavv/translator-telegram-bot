@@ -5,10 +5,11 @@ import (
 )
 
 type User struct {
-	ID        int64
-	ChatId    int64
-	Username  string
+	ID        int64  `json:"id"`
+	ChatId    int64  `json:"chat_id"`
+	Username  string `json:"username"`
 	Token     string
+	TZ        string `json:"timezone"`
 	CreatedAt time.Time
 }
 
