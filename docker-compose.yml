@@ -30,6 +30,15 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
+      SERVER_HOST: ${SERVER_HOST}
+      SERVER_PORT: ${SERVER_PORT}
+      SERVER_STATIC_FILES_PATH: ${SERVER_STATIC_FILES_PATH}
+      DATABASE_DRIVER: ${DATABASE_DRIVER}
+      DATABASE_DSN: ${DATABASE_DSN}
+      API_TOKEN: ${API_TOKEN}
+      API_ENDPOINT: ${API_ENDPOINT}
+      TRANSLATOR_API_ENDPOINT: ${TRANSLATOR_API_ENDPOINT}
+      ENV_MODE: ${ENV_MODE}
     volumes:
       - ./var/log:/app/var/log
     # binding internal ports to external
