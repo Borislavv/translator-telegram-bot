@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
@@ -17,15 +16,7 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
 )
 
-// Config vars.
-var (
-	environmentMode   string
-	configurationPath string
-)
-
 func main() {
-	askFlags()
-
 	fmt.Println("Initialization")
 
 	// Init. channels for communication with gorutines
@@ -36,43 +27,43 @@ func main() {
 	commandsChannel := make(chan *model.CommandMessage, 128)
 	errorsChannel := make(chan string, 756)
 
-	// Creating an instance of Config at first and load it
-	config := config.New().Load(configurationPath, environmentMode)
+	// Creating an instance of Config at first and load it.
+	config := config.New().Load()
 
-	// Creating an instance of Manager (contains repos and config)
+	// Creating an instance of Manager (contains repos and config).
 	manager := manager.New(config)
 
-	// Creating an instance of TelegramGatewayService
+	// Creating an instance of TelegramGatewayService.
 	telegramGateway := telegram.NewTelegramGateway(manager)
 
-	// Creating an instance of UserService
+	// Creating an instance of UserService.
 	userService := service.NewUserService(manager)
 
-	// Creating an instance of ChatService
+	// Creating an instance of ChatService.
 	chatService := service.NewChatService(manager)
 
-	// Creating an instance of NotificationService
+	// Creating an instance of NotificationService.
 	notificationService := service.NewNotificationService(manager)
 
-	// Creating an instance of TranslatorGateway
+	// Creating an instance of TranslatorGateway.
 	translatorGateway := translator.NewTranslatorGateway(manager)
 
-	// Creating an instance of TranslatorService
+	// Creating an instance of TranslatorService.
 	translator := translator.NewTranslatorService(translatorGateway)
 
-	// Creating an instance of AuthService
+	// Creating an instance of AuthService.
 	auth := dashboardService.NewAuthService(manager, userService)
 
-	// Creating an instance of TokenGenerator
+	// Creating an instance of TokenGenerator.
 	tokenGenerator := dashboardService.NewTokenGenerator()
 
-	// Creating an instance of CommandService
+	// Creating an instance of CommandService.
 	commandsService := command.NewCommandService(manager)
 
-	// Creating an instance of LoggerService
+	// Creating an instance of LoggerService.
 	loggerService := loggerService.NewLoggerService(manager)
 
-	// Creating an instace of TelegramService
+	// Creating an instace of TelegramService.
 	telegramService := telegram.NewTelegramService(
 		manager,
 		telegramGateway,
@@ -90,15 +81,15 @@ func main() {
 		errorsChannel,
 	)
 
-	// Creating an instance of TelegramBotService
+	// Creating an instance of TelegramBotService.
 	bot := telegram.NewTelegramBot(telegramService, errorsChannel)
 
-	// Close connection with database in defer
+	// Close connection with database in defer.
 	defer manager.Repository.Close()
 
 	fmt.Println("Handling messages ...")
 
-	// HTTP server which handle Dashboard
+	// HTTP server which handle Dashboard.
 	go func() {
 		server := handler.NewHandler(manager, auth, notificationService, translator)
 		server.HandleDashboard()
@@ -109,11 +100,4 @@ func main() {
 	bot.ProcessMessages()
 	bot.ProcessNotifications()
 	bot.ProcessErrors()
-}
-
-// askFlags - getting args. from cli
-func askFlags() {
-	flag.StringVar(&environmentMode, "env-mode", config.ProdMode, "one of env. modes: prod|dev")
-	flag.StringVar(&configurationPath, "config-path", config.DefaultConfigPath, "path to config file")
-	flag.Parse()
 }
