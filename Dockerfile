@@ -18,7 +18,7 @@ RUN go mod download
 COPY . .
 
 # Install necessery depsendencies
-RUN go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@latest && go get github.com/go-sql-driver/mysql
+RUN go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@latest && go get github.com/go-sql-driver/mysql && go get github.com/mgutz/ansi
 
 # Export necessary port
 EXPOSE 8000

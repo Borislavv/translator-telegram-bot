@@ -1,4 +1,4 @@
-package util
+package dashboardService
 
 import (
 	"encoding/json"
@@ -8,8 +8,16 @@ import (
 	response "github.com/Borislavv/Translator-telegram-bot/pkg/model/modelAPI/responseAPI"
 )
 
-// WriteResponse - writing data to ResponseWriter of http package.
-func WriteResponse(w http.ResponseWriter, data dataAPI.DataInterface, code int) {
+type ResponseWriter struct {
+}
+
+// NewResponseWriter - constructor of ResponseWriter structure.
+func NewResponseWriter() *ResponseWriter {
+	return &ResponseWriter{}
+}
+
+// WriteDataIntoResponse - writing data to ResponseWriter of http package.
+func (writer *ResponseWriter) WriteDataIntoResponse(w http.ResponseWriter, data dataAPI.DataInterface, code int) {
 	resp := response.NewResponse(data, code)
 
 	jsonData, err := json.Marshal(resp)

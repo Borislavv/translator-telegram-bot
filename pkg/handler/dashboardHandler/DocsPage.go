@@ -5,7 +5,6 @@ import (
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDashboard"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
 // Index - handler of "/docs" endpoint
@@ -29,5 +28,5 @@ func (dashboard *Dashboard) DocsPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	util.RenderFromFiles(w, templates, page)
+	dashboard.renderingService.RenderFromFiles(w, templates, page)
 }

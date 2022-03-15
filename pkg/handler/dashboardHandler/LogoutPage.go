@@ -5,7 +5,6 @@ import (
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDashboard"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
 // LogoutPage - handler of "/Logout" endpoint
@@ -39,5 +38,5 @@ func (dashboard *Dashboard) LogoutPage(w http.ResponseWriter, r *http.Request) {
 	page.AddMenu(modelDashboard.NewMenu())
 	page.AddConent(content)
 
-	util.RenderFromFiles(w, templates, page)
+	dashboard.renderingService.RenderFromFiles(w, templates, page)
 }
