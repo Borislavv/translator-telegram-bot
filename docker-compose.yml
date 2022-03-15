@@ -30,6 +30,8 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
+    volumes:
+      - ./var/log:/app/var/log
     # binding internal ports to external
     ports:
       - 8000:8000

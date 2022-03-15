@@ -21,7 +21,7 @@ func NewUserService(manager *manager.Manager) *UserService {
 	}
 }
 
-// GetUser - getting of target user by username, if not found, then will created
+// GetUser - getting a user by the username field. If the user is not found, it will be created.
 func (userService *UserService) GetUser(username string, chatId int64) (*modelDB.User, error) {
 	// trying to find user into the cache
 	if _, issetInCache := userService.Cache[username]; !issetInCache {

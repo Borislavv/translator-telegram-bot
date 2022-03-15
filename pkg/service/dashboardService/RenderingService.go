@@ -1,14 +1,22 @@
-package util
+package dashboardService
 
 import (
-	"html/template"
 	"log"
 	"net/http"
+	"text/template"
 )
+
+type RenderingService struct {
+}
+
+// NewRenderingService - constructor of RenderingService structure.
+func NewRenderingService() *RenderingService {
+	return &RenderingService{}
+}
 
 // RenderFromFiles - render templates from files and pass the `date` into it.
 // The order of the files in `templates` is important, daughters first, then parents.
-func RenderFromFiles(w http.ResponseWriter, templates []string, data interface{}) {
+func (service *RenderingService) RenderFromFiles(w http.ResponseWriter, templates []string, data interface{}) {
 	// Используем функцию template.ParseFiles() для чтения файлов шаблона.
 	// Если возникла ошибка, мы запишем детальное сообщение ошибки и
 	// используя функцию http.Error() мы отправим пользователю

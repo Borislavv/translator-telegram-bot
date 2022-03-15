@@ -5,7 +5,6 @@ import (
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDashboard"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
 // Index - handler of "/login" endpoint
@@ -47,5 +46,5 @@ func (dashboard *Dashboard) LoginPage(w http.ResponseWriter, r *http.Request) {
 
 	page.AddConent(content)
 
-	util.RenderFromFiles(w, templates, page)
+	dashboard.renderingService.RenderFromFiles(w, templates, page)
 }

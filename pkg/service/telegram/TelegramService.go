@@ -12,6 +12,7 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/dashboardService"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/loggerService"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram/command"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
@@ -28,6 +29,7 @@ type TelegramService struct {
 	translator     *translator.TranslatorService
 	tokenGenerator *dashboardService.TokenGenerator
 	commandService *command.CommandService
+	loggerService  *loggerService.LoggerService
 
 	// Channels
 	messagesChannel      chan *model.UpdatedMessage
@@ -50,6 +52,7 @@ func NewTelegramService(
 	translator *translator.TranslatorService,
 	tokenGenerator *dashboardService.TokenGenerator,
 	commandService *command.CommandService,
+	loggerService *loggerService.LoggerService,
 	messagesChannel chan *model.UpdatedMessage,
 	notificationsChannel chan *modelDB.NotificationQueue,
 	storeChannel chan *model.UpdatedMessage,
@@ -65,6 +68,7 @@ func NewTelegramService(
 		translator:           translator,
 		tokenGenerator:       tokenGenerator,
 		commandService:       commandService,
+		loggerService:        loggerService,
 		messagesChannel:      messagesChannel,
 		notificationsChannel: notificationsChannel,
 		storeChannel:         storeChannel,
@@ -144,7 +148,6 @@ func (telegramService *TelegramService) GetMessages() {
 
 		var receivedOffset int64
 		for _, message := range messages.Messages {
-
 			msg := message
 
 			// Run `SendMessages` gorutine

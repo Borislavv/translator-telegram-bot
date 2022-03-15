@@ -77,7 +77,7 @@ func (dashboard *Dashboard) NotificationsPage(w http.ResponseWriter, r *http.Req
 	page.AddConent(content)
 	page.AddTemplateFuncs(helper.NewTemplateFuncsHelper())
 
-	util.RenderFromFiles(w, templates, page)
+	dashboard.renderingService.RenderFromFiles(w, templates, page)
 }
 
 // EnableNotificationAPIMethod - api method which serve `/api/v1/notifications/enable/{id}` (set `is_active` to 1(true|enabled)).
@@ -85,33 +85,33 @@ func (dashboard *Dashboard) EnableNotificationAPIMethod(w http.ResponseWriter, r
 	// will be denied to unauthorized users
 	err := dashboard.authService.IsGrantedAccessByCookies(w, r)
 	if err != nil {
-		util.WriteResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusBadRequest)
+		dashboard.responseWriter.WriteDataIntoResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusBadRequest)
 		return
 	}
 
 	// receiving id from r.URL.Path
 	id, err := util.ExctractId(r.URL.Path)
 	if err != nil {
-		util.WriteResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusBadRequest)
+		dashboard.responseWriter.WriteDataIntoResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusBadRequest)
 		return
 	}
 
 	// receiving target notification from database
 	notification, err := dashboard.manager.Repository.NotificationQueue().FindById(id)
 	if err != nil {
-		util.WriteResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusBadRequest)
+		dashboard.responseWriter.WriteDataIntoResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusBadRequest)
 		return
 	}
 
 	// updating target notification
 	notification, err = dashboard.manager.Repository.NotificationQueue().MakeAsEnabled(notification)
 	if err != nil {
-		util.WriteResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusInternalServerError)
+		dashboard.responseWriter.WriteDataIntoResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusInternalServerError)
 		return
 	}
 
 	// send response to client
-	util.WriteResponse(w, dataAPI.NewStatusData(notification.IsActive == true), http.StatusOK)
+	dashboard.responseWriter.WriteDataIntoResponse(w, dataAPI.NewStatusData(notification.IsActive == true), http.StatusOK)
 }
 
 // DisableNotificationAPIMethod - api method which serve `/api/v1/notifications/disable/{id}` (set `is_active` to 0(false|disabled)).
@@ -119,31 +119,31 @@ func (dashboard *Dashboard) DisableNotificationAPIMethod(w http.ResponseWriter, 
 	// will be denied to unauthorized users
 	err := dashboard.authService.IsGrantedAccessByCookies(w, r)
 	if err != nil {
-		util.WriteResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusBadRequest)
+		dashboard.responseWriter.WriteDataIntoResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusBadRequest)
 		return
 	}
 
 	// receiving id from r.URL.Path
 	id, err := util.ExctractId(r.URL.Path)
 	if err != nil {
-		util.WriteResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusBadRequest)
+		dashboard.responseWriter.WriteDataIntoResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusBadRequest)
 		return
 	}
 
 	// receiving target notification from database
 	notification, err := dashboard.manager.Repository.NotificationQueue().FindById(id)
 	if err != nil {
-		util.WriteResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusBadRequest)
+		dashboard.responseWriter.WriteDataIntoResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusBadRequest)
 		return
 	}
 
 	// updating target notification
 	notification, err = dashboard.manager.Repository.NotificationQueue().MakeAsDisabled(notification)
 	if err != nil {
-		util.WriteResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusInternalServerError)
+		dashboard.responseWriter.WriteDataIntoResponse(w, dataAPI.NewErrorData(err.Error()), http.StatusInternalServerError)
 		return
 	}
 
 	// send response to client
-	util.WriteResponse(w, dataAPI.NewStatusData(notification.IsActive == false), http.StatusOK)
+	dashboard.responseWriter.WriteDataIntoResponse(w, dataAPI.NewStatusData(notification.IsActive == false), http.StatusOK)
 }

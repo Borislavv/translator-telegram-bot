@@ -11,6 +11,7 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/dashboardService"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service/loggerService"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram/command"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/translator"
@@ -68,6 +69,9 @@ func main() {
 	// Creating an instance of CommandService
 	commandsService := command.NewCommandService(manager)
 
+	// Creating an instance of LoggerService
+	loggerService := loggerService.NewLoggerService(manager)
+
 	// Creating an instace of TelegramService
 	telegramService := telegram.NewTelegramService(
 		manager,
@@ -77,6 +81,7 @@ func main() {
 		translator,
 		tokenGenerator,
 		commandsService,
+		loggerService,
 		messagesChannel,
 		notificationsChannel,
 		storeChannel,

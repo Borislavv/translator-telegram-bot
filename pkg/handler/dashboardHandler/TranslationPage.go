@@ -9,7 +9,6 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelAPI/dataAPI"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDashboard"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
 // TranslationPage - handler of "/translation" endpoint
@@ -54,7 +53,7 @@ func (dashboard *Dashboard) TranslationPage(w http.ResponseWriter, r *http.Reque
 
 	page.AddConent(content)
 
-	util.RenderFromFiles(w, templates, page)
+	dashboard.renderingService.RenderFromFiles(w, templates, page)
 }
 
 // TranslationAPI - method for translate simple text by API
@@ -90,7 +89,7 @@ func (dashboard *Dashboard) TranslateAPIMethod(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	util.WriteResponse(
+	dashboard.responseWriter.WriteDataIntoResponse(
 		w,
 		dataAPI.NewContentData(ResponseData{
 			Text: translatedText,

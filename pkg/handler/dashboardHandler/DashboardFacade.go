@@ -15,6 +15,8 @@ type Dashboard struct {
 	authService         *dashboardService.AuthService
 	notificationService *service.NotificationService
 	translatorService   *translator.TranslatorService
+	responseWriter      *dashboardService.ResponseWriter
+	renderingService    *dashboardService.RenderingService
 }
 
 // NewDashboard - constructor of Dashboard struct
@@ -29,6 +31,8 @@ func NewDashboard(
 		authService:         authService,
 		notificationService: notificationService,
 		translatorService:   translationService,
+		responseWriter:      dashboardService.NewResponseWriter(),
+		renderingService:    dashboardService.NewRenderingService(),
 	}
 }
 
