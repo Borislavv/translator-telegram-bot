@@ -8,21 +8,27 @@ import (
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
-	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 )
 
 type TimeZoneCommand struct {
 	// deps.
-	manager *manager.Manager
+	manager     *manager.Manager
+	userService *service.UserService
 	// vals.
 	message *model.CommandMessage
 }
 
 // NewTimeZoneCommand - constructor of TimeZoneCommand struct.
-func NewTimeZoneCommand(manager *manager.Manager, message *model.CommandMessage) *TimeZoneCommand {
+func NewTimeZoneCommand(
+	manager *manager.Manager,
+	message *model.CommandMessage,
+	userService *service.UserService,
+) *TimeZoneCommand {
 	return &TimeZoneCommand{
-		manager: manager,
-		message: message,
+		manager:     manager,
+		message:     message,
+		userService: userService,
 	}
 }
 
@@ -36,7 +42,7 @@ func (command *TimeZoneCommand) Exec() (*model.TelegramResponseMessage, error) {
 		)
 	}
 
-	tz, err := util.GetUserTimeZone(matches[0])
+	tz, err := command.userService.GetUserTimeZone(matches[0])
 	if err != nil {
 		return nil, err
 	}

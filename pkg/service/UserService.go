@@ -1,23 +1,34 @@
 package service
 
 import (
+	"errors"
 	"log"
+	"sync"
+	"time"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model/modelDB"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
 
+var dateTimeLayout = "2006-01-02 15:04:05"
+var dateTimeShortLayout = "2006-01-02 15"
+var mx *sync.Mutex
+
 type UserService struct {
-	manager *manager.Manager
-	Cache   map[string]*modelDB.User
+	// deps.
+	manager   *manager.Manager
+	tzFetcher *TimeZoneFetcherService
+	// vals.
+	Cache map[string]*modelDB.User
 }
 
 // NewUserService - constructor of UserService
-func NewUserService(manager *manager.Manager) *UserService {
+func NewUserService(manager *manager.Manager, tzFetcher *TimeZoneFetcherService) *UserService {
 	return &UserService{
-		manager: manager,
-		Cache:   map[string]*modelDB.User{},
+		manager:   manager,
+		tzFetcher: tzFetcher,
+		Cache:     map[string]*modelDB.User{},
 	}
 }
 
@@ -65,4 +76,25 @@ func (userService *UserService) SetToken(user *modelDB.User, token string) (*mod
 	userService.Cache[user.Username] = user
 
 	return user, nil
+}
+
+// GetUserTimeZone - goes over all timezones and trying determine the target one.
+func (userService *UserService) GetUserTimeZone(dateTime string) (string, error) {
+	var loc *time.Location
+
+	userDateTime, err := time.Parse(dateTimeLayout, dateTime)
+	if err != nil {
+		return "", err
+	}
+
+	now := time.Now()
+	for _, tz := range userService.tzFetcher.GetTimeZones() {
+		loc, _ = time.LoadLocation(tz)
+
+		if now.In(loc).Format(dateTimeShortLayout) == userDateTime.Format(dateTimeShortLayout) {
+			return tz, nil
+		}
+	}
+
+	return "", errors.New("Unable determine timezone of user provided string.")
 }
