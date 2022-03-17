@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/config"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
@@ -19,7 +20,10 @@ import (
 func main() {
 	fmt.Println("Initialization")
 
-	// Init. channels for communication with gorutines
+	// Init. requirements.
+	var mx sync.Mutex
+
+	// Init. channels for communication with gorutines.
 	messagesChannel := make(chan *model.UpdatedMessage, 128)
 	notificationsChannel := make(chan *modelDB.NotificationQueue, 128)
 	storeChannel := make(chan *model.UpdatedMessage, 128)
@@ -36,8 +40,11 @@ func main() {
 	// Creating an instance of TelegramGatewayService.
 	telegramGateway := telegram.NewTelegramGateway(manager)
 
+	// Creating an instance of TimeZoneFetcherService.
+	timeZonesFetcher := service.NewtimeZoneFetcherService(&mx)
+
 	// Creating an instance of UserService.
-	userService := service.NewUserService(manager)
+	userService := service.NewUserService(manager, timeZonesFetcher)
 
 	// Creating an instance of ChatService.
 	chatService := service.NewChatService(manager)
@@ -57,8 +64,11 @@ func main() {
 	// Creating an instance of TokenGenerator.
 	tokenGenerator := dashboardService.NewTokenGenerator()
 
+	// Creating an instance of CommandFactory.
+	commandFactory := command.NewCommandFactory(manager, userService)
+
 	// Creating an instance of CommandService.
-	commandsService := command.NewCommandService(manager)
+	commandsService := command.NewCommandService(commandFactory)
 
 	// Creating an instance of LoggerService.
 	loggerService := loggerService.NewLoggerService(manager)

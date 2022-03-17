@@ -4,7 +4,6 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/util"
 )
@@ -14,9 +13,11 @@ type CommandService struct {
 }
 
 // NewCommandService - constructor of CommandService structure.
-func NewCommandService(manager *manager.Manager) *CommandService {
+func NewCommandService(
+	factory CommandFactoryInterface,
+) *CommandService {
 	return &CommandService{
-		factory: NewCommandFactory(manager),
+		factory: factory,
 	}
 }
 

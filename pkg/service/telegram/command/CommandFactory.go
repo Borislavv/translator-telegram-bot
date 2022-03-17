@@ -6,6 +6,7 @@ import (
 
 	"github.com/Borislavv/Translator-telegram-bot/pkg/app/manager"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/model"
+	"github.com/Borislavv/Translator-telegram-bot/pkg/service"
 	"github.com/Borislavv/Translator-telegram-bot/pkg/service/telegram/command/commands"
 )
 
@@ -18,13 +19,19 @@ type CommandFactoryInterface interface {
 }
 
 type CommandFactory struct {
-	manager *manager.Manager
+	// deps.
+	manager     *manager.Manager
+	userService *service.UserService
 }
 
 // NewCommandFactory - constructor of CommandFactory struct.
-func NewCommandFactory(manager *manager.Manager) CommandFactoryInterface {
+func NewCommandFactory(
+	manager *manager.Manager,
+	userService *service.UserService,
+) CommandFactoryInterface {
 	return &CommandFactory{
-		manager: manager,
+		manager:     manager,
+		userService: userService,
 	}
 }
 
@@ -51,7 +58,7 @@ func (factory *CommandFactory) buildCommand(message *model.CommandMessage) (Comm
 		} else if len(regexp.MustCompile(`\/start`).FindStringSubmatch(message.OriginMessage.Data.Text)) > 0 {
 			return commands.NewStartCommand(message), nil
 		} else if len(regexp.MustCompile(`\/set_tz`).FindStringSubmatch(message.OriginMessage.Data.Text)) > 0 {
-			return commands.NewTimeZoneCommand(factory.manager, message), nil
+			return commands.NewTimeZoneCommand(factory.manager, message, factory.userService), nil
 		}
 	}
 
