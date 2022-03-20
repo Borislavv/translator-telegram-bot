@@ -27,4 +27,4 @@ EXPOSE 8000
 RUN migrate -database "mysql://root:colahonda@tcp(db:3306)/translatortelegrambot" -path migrations up; exit 0;
 
 # Run the app
-CMD [ "go", "run", "cmd/app/main.go", "--config-path=config/.env.dev.toml", "--env-mode=dev" ]
+CMD [ "go", "run", "cmd/app/main.go"]
