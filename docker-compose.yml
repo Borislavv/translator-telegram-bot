@@ -33,6 +33,8 @@ services:
       SERVER_HOST: ${SERVER_HOST}
       SERVER_PORT: ${SERVER_PORT}
       SERVER_STATIC_FILES_PATH: ${SERVER_STATIC_FILES_PATH}
+      GRPC_SERVER_PORT: ${GRPC_SERVER_PORT}
+      GRPC_NET_PROTOCOL: ${GRPC_NET_PROTOCOL}
       DATABASE_DRIVER: ${DATABASE_DRIVER}
       DATABASE_DSN: ${DATABASE_DSN}
       API_TOKEN: ${API_TOKEN}
@@ -44,7 +46,8 @@ services:
     # binding internal ports to external
     ports:
       - 8000:8000
-    # opens port 8000 on the container
+      - 8017:8017
+    # opens port 8000 (for server) and 8017 (for gRPC) on the container
     expose:
       - '8000'
     # restrt if error occurred

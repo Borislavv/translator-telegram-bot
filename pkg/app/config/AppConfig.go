@@ -37,6 +37,7 @@ type Config struct {
 	Environment *Environment
 	Integration *IntegrationConfig
 	Server      *ServerConfig
+	GRPCServer  *GRPCServerConfig
 }
 
 // NewConfig - creating a new instance of Config.
@@ -46,6 +47,7 @@ func New() *Config {
 		Environment: &Environment{ProdMode},
 		Integration: NewIntegrationConfig(),
 		Server:      NewServerConfig(),
+		GRPCServer:  NewGRPCServerConfig(),
 	}
 }
 
@@ -72,6 +74,10 @@ func (config *Config) Load() *Config {
 	config.Server.Host = os.Getenv("SERVER_HOST")
 	config.Server.Port = os.Getenv("SERVER_PORT")
 	config.Server.StaticFilesDir = os.Getenv("SERVER_STATIC_FILES_PATH")
+
+	// gRPC server config init.
+	config.GRPCServer.Port = os.Getenv("GRPC_SERVER_PORT")
+	config.GRPCServer.Protocol = os.Getenv("GRPC_NET_PROTOCOL")
 
 	return config
 }

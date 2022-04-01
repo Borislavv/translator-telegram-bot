@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package="service/timeZoneFetcherGRPCInterface";
+
+// TimeZoneFetcher service
+service TimeZoneFetcherService {
+    rpc GetTimeZone(RequestForTimeZone) returns (TimeZoneResponse) {}
+}
+
+// date - `Y-m-d H:i:s` string (without timezone)
+message RequestForTimeZone {
+    string date = 1;
+}
+
+message TimeZoneResponse {
+    string timezone = 1;
+}

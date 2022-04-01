@@ -20,8 +20,8 @@ type TimeZoneFetcherService struct {
 	mx *sync.Mutex
 }
 
-// NewtimeZoneFetcherService - contructor of TimeZoneFetcherService structure.
-func NewtimeZoneFetcherService(mx *sync.Mutex) *TimeZoneFetcherService {
+// NewTimeZoneFetcherService - contructor of TimeZoneFetcherService structure.
+func NewTimeZoneFetcherService(mx *sync.Mutex) *TimeZoneFetcherService {
 	return &TimeZoneFetcherService{
 		mx: mx,
 	}

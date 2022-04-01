@@ -20,8 +20,9 @@ COPY . .
 # Install necessery depsendencies
 RUN go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@latest && go get github.com/go-sql-driver/mysql && go get github.com/mgutz/ansi
 
-# Export necessary port
+# Export necessary port (8000 - main server port, 8017 - gRPC server port)
 EXPOSE 8000
+EXPOSE 8017
 
 # Execute migrations
 RUN migrate -database "mysql://root:colahonda@tcp(db:3306)/translatortelegrambot" -path migrations up; exit 0;
