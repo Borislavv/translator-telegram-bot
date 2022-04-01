@@ -37,11 +37,14 @@ func main() {
 	// Creating an instance of Manager (contains repos and config).
 	manager := manager.New(config)
 
+	// Creating an instance of LoggerService.
+	loggerService := loggerService.NewLoggerService(manager)
+
 	// Creating an instance of TelegramGatewayService.
 	telegramGateway := telegram.NewTelegramGateway(manager)
 
 	// Creating an instance of TimeZoneFetcherService.
-	timeZonesFetcher := service.NewtimeZoneFetcherService(&mx)
+	timeZonesFetcher := service.NewTimeZoneFetcherService(&mx)
 
 	// Creating an instance of UserService.
 	userService := service.NewUserService(manager, timeZonesFetcher)
@@ -70,9 +73,6 @@ func main() {
 	// Creating an instance of CommandService.
 	commandsService := command.NewCommandService(commandFactory)
 
-	// Creating an instance of LoggerService.
-	loggerService := loggerService.NewLoggerService(manager)
-
 	// Creating an instace of TelegramService.
 	telegramService := telegram.NewTelegramService(
 		manager,
@@ -97,17 +97,42 @@ func main() {
 	// Close connection with database in defer.
 	defer manager.Repository.Close()
 
-	fmt.Println("Handling messages ...")
+	loggerService.Info("Success initialization. Handling messages ...")
+
+	// gRPC server.
+	go runGRPCServer(manager, translator, loggerService, userService)
 
 	// HTTP server which handle Dashboard.
-	go func() {
-		server := handler.NewHandler(manager, auth, notificationService, translator)
-		server.HandleDashboard()
-		server.HandleStaticFiles()
-		server.ListenAndServe()
-	}()
+	go runHTTPServer(manager, auth, notificationService, translator, loggerService)
 
 	bot.ProcessMessages()
 	bot.ProcessNotifications()
 	bot.ProcessErrors()
+}
+
+// runGRPCServer - handling 8017 port (tcp) by default (! infinite loop: must be running in separate thread).
+func runGRPCServer(
+	manager *manager.Manager,
+	translator *translator.TranslatorService,
+	logger *loggerService.LoggerService,
+	userService *service.UserService,
+) {
+	handler.
+		NewHandlerGRPC(manager, translator, logger, userService).
+		ListenAndServe()
+}
+
+// runHTTPServer - handling 8000 port by default (! infinite loop: must be running in separate thread).
+func runHTTPServer(
+	manager *manager.Manager,
+	auth *dashboardService.AuthService,
+	notificationService *service.NotificationService,
+	translator *translator.TranslatorService,
+	logger *loggerService.LoggerService,
+) {
+	handler.
+		NewHandler(manager, auth, notificationService, translator, logger).
+		HandleDashboard().
+		HandleStaticFiles().
+		ListenAndServe()
 }
