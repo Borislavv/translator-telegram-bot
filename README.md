@@ -1,6 +1,6 @@
 # Translator-telegram-bot
 
-**Author**: Glazunov Borislav
+**Author**: Glazunov Boris
 
 **Github**: github.com/Borislavv **|**
 **Gitlab**: gitlab.com/Zendden
