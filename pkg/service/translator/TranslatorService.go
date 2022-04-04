@@ -26,7 +26,7 @@ func (translator *TranslatorService) TranslateText(text string) (string, error) 
 	return translator.gateway.GetTranslation(sourceLanguage, targetLanguage, text)
 }
 
-// DetectLanguages - detecting target and source language by regex
+// DetectLanguages - detecting source and target language by regex
 func (translator *TranslatorService) detectLanguages(text string) (string, string) {
 	if matched, _ := regexp.MatchString("[а-яА-Я]+", text); matched {
 		return RuLanguage, EnLanguage
